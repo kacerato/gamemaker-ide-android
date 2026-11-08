@@ -7,6 +7,8 @@ teclado, compilação local Android VM, preview e exportação de APK.
 
 Baixe o APK Release em [Releases](https://github.com/kacerato/gamemaker-ide-android/releases/latest).
 A versão 0.2.1 aparece no launcher como **GM IDE Android**.
+A release mais recente inclui a [correção da instalação do runtime e do F5](docs/release-0.2.1-runtimefix.md),
+validada no celular com o Tower Defense Template.
 Para atualizar uma instalação com a mesma assinatura, instale por cima e preserve
 os dados. Não desinstale o aplicativo para uma atualização normal.
 

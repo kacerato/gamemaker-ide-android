@@ -23,10 +23,9 @@ namespace GmIde;
 //     package.json                                 versoes + SHA-256 de cada arquivo
 //
 // <system_directory> e o mesmo que RuntimeImport.SystemDirectory() calcula depois do
-// MacroExpansion: ${LocalApplicationData}/GameMakerStudio2-LTS2026, com LocalApplicationData =
-// $XDG_DATA_HOME = <GetExternalFilesDir>/home/.local/share (Launcher.PrepareFolders). Como o
-// runtime ja chega com receipt.json, RuntimeImport.Run() nao copia nada: so registra em
-// runtime.json (e nao precisa da pasta de passagem do adb).
+// MacroExpansion. No Mono/Android observado, CommonApplicationData resolve para
+// <GetExternalFilesDir>/home; XDG_DATA_HOME nao altera esse valor. A instalacao nova
+// ja chega com receipt.json; RuntimeImport registra o runtime e instala seu modulo Android.
 //
 // Fluxo (PackageImport.TryInstall, chamado pelo Launcher antes do ImportIde do adb):
 //  1. abre bootstrap/gmide-package.zip do proprio APK, sem permissao ou copia;
@@ -116,6 +115,8 @@ public sealed class PackageAssetStream : Stream
 
 public sealed class PackageExtractor
 {
+    public static string SystemDirectoryFor(string externalFiles) =>
+        Path.Combine(externalFiles, "home", "GameMakerStudio2-LTS2026");
     public const string ManifestEntry = "package.json";
     public const string IdePrefix = "ide/";
     public const string RuntimePrefix = "runtime/";
@@ -316,8 +317,7 @@ public static class PackageImport
 
     /// ${system_directory} antes do MacroExpansion (ver comentario no topo).
     public static string SystemDirectory =>
-        Path.Combine(MainApplication.Instance.GetExternalFilesDir(null)!.AbsolutePath,
-                     "home", ".local", "share", ProgramDirName);
+        PackageExtractor.SystemDirectoryFor(MainApplication.Instance.GetExternalFilesDir(null)!.AbsolutePath);
 
     /// Instala a IDE (e o runtime) do gmide-package.zip se ideDir/IDE.dll faltar.
     /// true = IDE pronta em ideDir. false = nada instalado (o Launcher segue para o ImportIde do adb).

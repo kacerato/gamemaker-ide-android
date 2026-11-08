@@ -10,5 +10,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\..\host\PackageImport.cs" Link="PackageImport.cs" />
+    <Compile Include="..\..\host\RuntimeIntegrity.cs" Link="RuntimeIntegrity.cs" />
   </ItemGroup>
 </Project>

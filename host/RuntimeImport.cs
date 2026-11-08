@@ -16,8 +16,8 @@ namespace GmIde;
 //   runtime ativo          = ${system_directory}/runtime.json: {"active": ver, ver: "<pasta>&<feed>"}
 //                            (RuntimeEntry.MatchRuntimeJSON; instalado = pasta + receipt.json)
 //   prefabs                = ${CommonApplicationData}/${program_dir_name}/Prefabs (IDE.cs, ProjectInfo.Init)
-// No app, LocalApplicationData = $XDG_DATA_HOME (Launcher.PrepareFolders), entao o destino e
-// <files externos>/home/.local/share/GameMakerStudio2-LTS2026/Cache/runtimes/runtime-2026.0.0.23.
+// No Mono/Android observado, CommonApplicationData resolve para HOME, entao o destino e
+// <files externos>/home/GameMakerStudio2-LTS2026/Cache/runtimes/runtime-2026.0.0.23.
 //
 // Mesmo padrao da IDE (Launcher.ImportIde): o adb nao consegue gravar arquivos legiveis pelo
 // app em Android/data, entao o deploy.sh empurra para a pasta publica de passagem
@@ -50,7 +50,7 @@ static class RuntimeImport
             }
         }
         catch (Exception e) { Log.Warn(Tag, "MacroExpansion: " + e.Message); }
-        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), ProgramDirName);
+        return PackageImport.SystemDirectory;
     }
 
     public static string DefaultRuntimeDir() => Path.Combine(SystemDirectory(), "Cache", "runtimes", RuntimeFolder);
@@ -65,6 +65,16 @@ static class RuntimeImport
         Log.Info(Tag, $"Runtime: {dest} (passagem {(stagedOk ? "completa" : "ausente/incompleta")})");
         try
         {
+            // 0.2.1 extracted the bundled runtime under XDG_DATA_HOME, while Mono's
+            // CommonApplicationData and the IDE resolve home/<program_dir_name>.
+            // Recover missing files before receipt.json can make a Linux-only download
+            // look complete. Retain both the source and existing unrelated files.
+            var oldSystem = Path.Combine(MainApplication.Instance.GetExternalFilesDir(null)!.AbsolutePath,
+                "home", ".local", "share", ProgramDirName);
+            var oldRuntime = Path.Combine(oldSystem, "Cache", "runtimes", RuntimeFolder);
+            RuntimeIntegrity.RestoreFromLegacy(oldRuntime, dest, m => Log.Info(Tag, m));
+            var oldPrefabs = Path.Combine(oldSystem, "Prefabs");
+            if (Directory.Exists(oldPrefabs)) SyncMissing(oldPrefabs, Path.Combine(sys, "Prefabs"));
             if (!File.Exists(Path.Combine(dest, "receipt.json")))
             {
                 if (!stagedOk)

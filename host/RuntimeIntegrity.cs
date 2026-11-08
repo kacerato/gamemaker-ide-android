@@ -32,6 +32,43 @@ public static class RuntimeIntegrity
     public static string ManifestPath(string runtimeDir) =>
         ManifestOverride ?? Path.Combine(runtimeDir, ManifestName);
 
+    /// Recover the verified bundled runtime installed in the old bootstrap directory.
+    /// Do not trust receipt.json alone: the IDE may have downloaded a Linux-only runtime.
+    public static bool RestoreFromLegacy(string source, string destination, Action<string> log)
+    {
+        string[] tools = { IgorRel, AssetCompilerRel, WebServerRel };
+        if (Path.GetFullPath(source) == Path.GetFullPath(destination) ||
+            tools.All(rel => VerifyFile(destination, rel, null, out _))) return false;
+        if (!File.Exists(Path.Combine(source, ManifestName))) return false;
+        foreach (string rel in tools)
+            if (!VerifyFile(source, rel, null, out var error))
+                throw new InvalidDataException("Runtime legado nao verificado: " + error);
+        int copied = 0;
+        foreach (string file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+        {
+            string rel = Path.GetRelativePath(source, file);
+            if (rel == ManifestName) continue; // Publish verification metadata last.
+            string target = Path.Combine(destination, rel);
+            bool critical = tools.Contains(rel.Replace('\\', '/'));
+            if (File.Exists(target) && (!critical || Hash(new FileInfo(target)) == Hash(new FileInfo(file)))) continue;
+            CopyAtomic(file, target);
+            copied++;
+        }
+        CopyAtomic(Path.Combine(source, ManifestName), Path.Combine(destination, ManifestName));
+        foreach (string rel in tools)
+            if (!VerifyFile(destination, rel, null, out var error)) throw new InvalidDataException(error);
+        log($"Runtime completo recuperado da instalacao anterior: {copied} arquivos, {source} -> {destination}");
+        return true;
+    }
+
+    static void CopyAtomic(string source, string destination)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+        string tmp = destination + ".gmide-repair";
+        File.Copy(source, tmp, true);
+        File.Move(tmp, destination, true);
+    }
+
     /// <summary>
     /// Confere <paramref name="rel"/> (caminho relativo ao runtime, com '/') contra o manifesto.
     /// <paramref name="orgs"/>: se dado, a organizacao assinante gravada no PC precisa ser uma delas

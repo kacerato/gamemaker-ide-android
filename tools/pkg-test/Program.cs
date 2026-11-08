@@ -17,8 +17,8 @@ void Check(bool ok, string what) { Console.WriteLine((ok ? "OK    " : "FALHA ") 
 PackageExtractor Make(string root) => new()
 {
     IdeDir = Path.Combine(root, "files", "ide"),
-    RuntimeDir = Path.Combine(root, "ext", "home", ".local", "share", "GameMakerStudio2-LTS2026", "Cache", "runtimes", RtFolder),
-    PrefabsDir = Path.Combine(root, "ext", "home", ".local", "share", "GameMakerStudio2-LTS2026", "Prefabs"),
+    RuntimeDir = Path.Combine(PackageExtractor.SystemDirectoryFor(Path.Combine(root, "ext")), "Cache", "runtimes", RtFolder),
+    PrefabsDir = Path.Combine(PackageExtractor.SystemDirectoryFor(Path.Combine(root, "ext")), "Prefabs"),
     RuntimeFolder = RtFolder,
     Log = Console.WriteLine,
 };
@@ -120,5 +120,24 @@ using (var slice = new PackageAssetStream(backing, 1, 3))
     Check(outside, "asset: seek fora do intervalo rejeitado");
 }
 Check(!backing.CanRead, "asset: descritor fechado ao terminar");
+Check(ex.RuntimeDir == Path.Combine(root1, "ext", "home", "GameMakerStudio2-LTS2026", "Cache", "runtimes", RtFolder),
+    "bootstrap usa o system_directory observado na IDE Android");
+var repaired = Path.Combine(outDir, "repaired-runtime");
+Directory.CreateDirectory(repaired);
+File.WriteAllText(Path.Combine(repaired, "receipt.json"), "linux-only");
+File.WriteAllText(Path.Combine(repaired, "local-settings.txt"), "preservar");
+Check(RuntimeIntegrity.RestoreFromLegacy(ex.RuntimeDir, repaired, Console.WriteLine) &&
+    new[] { RuntimeIntegrity.IgorRel, RuntimeIntegrity.AssetCompilerRel, RuntimeIntegrity.WebServerRel }
+        .All(rel => RuntimeIntegrity.VerifyFile(repaired, rel, null, out _)) &&
+    File.ReadAllText(Path.Combine(repaired, "receipt.json")) == "linux-only" &&
+    File.ReadAllText(Path.Combine(repaired, "local-settings.txt")) == "preservar",
+    "recupera toolchain verificado mesmo com receipt Linux, preservando arquivos existentes");
+Check(!RuntimeIntegrity.RestoreFromLegacy(ex.RuntimeDir, repaired, Console.WriteLine), "recuperacao idempotente");
+File.WriteAllText(Path.Combine(ex.RuntimeDir, RuntimeIntegrity.ManifestName), "corrompido");
+bool rejected = false;
+var rejectedRuntime = Path.Combine(outDir, "rejected-runtime");
+try { RuntimeIntegrity.RestoreFromLegacy(ex.RuntimeDir, rejectedRuntime, Console.WriteLine); }
+catch (InvalidDataException) { rejected = true; }
+Check(rejected && !Directory.Exists(rejectedRuntime), "origem invalida rejeitada antes de copiar");
 Console.WriteLine(fails == 0 ? "TUDO OK" : $"{fails} FALHA(S)");
 return fails == 0 ? 0 : 1;

@@ -67,32 +67,57 @@ public static class MobileWorkspace
     static int _zoomSteps;          // >0 aproxima
     static int _gesture;            // gesto atual: o alvo e resolvido de novo quando muda
 
-    public static void BeginGesture() { lock (_lock) { _gesture++; _panX = _panY = 0; _zoomSteps = 0; } }
+    // Pinca continua no workspace: escala = escala do inicio do gesto * razao entre as distancias dos
+    // dedos, ancorada no centro dos dedos (px de tela).
+    static float _pinchRatio, _pinchCx, _pinchCy;
+    static bool _hasPinch;
+
+    public static void BeginGesture() { lock (_lock) { _gesture++; _panX = _panY = 0; _zoomSteps = 0; _hasPinch = false; } }
     public static void AddPan(float dx, float dy) { lock (_lock) { _panX += dx; _panY += dy; } }
     public static void AddZoom(int steps) { lock (_lock) _zoomSteps += steps; }
+    public static void SetPinch(float ratio, float cx, float cy)
+    {
+        lock (_lock) { _pinchRatio = ratio; _pinchCx = cx; _pinchCy = cy; _hasPinch = true; }
+    }
 
-    internal static bool Take(out float dx, out float dy, out int zoom, out int gesture)
+    internal readonly struct Pending
+    {
+        public readonly float Dx, Dy, PinchRatio, PinchCx, PinchCy;
+        public readonly int Zoom, Gesture;
+        public readonly bool HasPinch;
+        public Pending(float dx, float dy, int zoom, int gesture, bool hasPinch, float ratio, float cx, float cy)
+        { Dx = dx; Dy = dy; Zoom = zoom; Gesture = gesture; HasPinch = hasPinch; PinchRatio = ratio; PinchCx = cx; PinchCy = cy; }
+    }
+
+    internal static bool Take(out Pending p)
     {
         lock (_lock)
         {
-            dx = _panX; dy = _panY; zoom = _zoomSteps; gesture = _gesture;
-            _panX = _panY = 0; _zoomSteps = 0;
+            p = new Pending(_panX, _panY, _zoomSteps, _gesture, _hasPinch, _pinchRatio, _pinchCx, _pinchCy);
+            _panX = _panY = 0; _zoomSteps = 0; _hasPinch = false;
         }
-        return dx != 0 || dy != 0 || zoom != 0;
+        return p.Dx != 0 || p.Dy != 0 || p.Zoom != 0 || p.HasPinch;
     }
 
-    // ---- dois dedos: ha canvas/workspace sob o centro dos dedos? (respondido pela IDE no proximo quadro)
+    // ---- dois dedos: o que ha sob o centro dos dedos? (respondido pela IDE no proximo quadro)
+    //   canvas: arrastar direto (PanArea do canvas ou workspace; uma area rolavel no caminho vence);
+    //   zoomWorkspace: a pinca e do workspace (o primeiro entre PanArea e WorkspaceArea subindo do
+    //   gadget e o workspace, mesmo com listas/paineis de uma janela no caminho).
     public static volatile int CanvasProbeGen, CanvasProbeX, CanvasProbeY;
     static volatile int _canvasDoneGen = -1;
-    static volatile bool _canvasHit;
+    static volatile bool _canvasHit, _zoomWorkspace;
 
-    public static bool TryGetCanvasProbe(int gen, out bool hit)
+    public static bool TryGetCanvasProbe(int gen, out bool canvas, out bool zoomWorkspace)
     {
-        hit = _canvasHit;
+        canvas = _canvasHit;
+        zoomWorkspace = _zoomWorkspace;
         return _canvasDoneGen == gen;
     }
 
-    internal static void AnswerCanvasProbe(int gen, bool hit) { _canvasHit = hit; _canvasDoneGen = gen; }
+    internal static void AnswerCanvasProbe(int gen, bool canvas, bool zoomWorkspace)
+    {
+        _canvasHit = canvas; _zoomWorkspace = zoomWorkspace; _canvasDoneGen = gen;
+    }
 
     static SystemPlatform.OnMouseMotionDelegate? _observer;
 
@@ -198,6 +223,31 @@ static class MobileWindowFit
     // Alvo do arraste do gesto atual (PanArea do canvas ou WorkspaceArea).
     static int _panGesture = -1;
     static WeakReference<GUIBase>? _panTarget;
+    static float _pinchStartScale = 1f;
+
+    /// <summary>
+    /// Pinca continua no workspace: a mesma conta do WorkspaceArea.WorkspaceZoom (protegido), com a
+    /// escala do inicio do gesto vezes a razao das distancias dos dedos e o ponto entre eles parado.
+    /// Antes a pinca virava Ctrl+roda, que a janela sob os dedos (lista do Prefabs, Inspetor de um
+    /// editor...) consumia: ScrollBar.Parent_MouseWheel so deixa o Ctrl+roda subir em janelas de uma
+    /// cadeia do workspace, e listas com zoom proprio de icones tambem o usam.
+    /// </summary>
+    static void PinchWorkspace(WorkspaceArea area, float ratio, float screenX, float screenY)
+    {
+        float min = area.MinScale, max = area.MaxScale;
+        if (!(max > min)) { min = 0.1f; max = 2f; }   // limites nao configurados: faixa segura
+        float scale = Math.Clamp(_pinchStartScale * ratio, min, max);
+        if (Math.Abs(scale - area.Layout.ClipScale) < 0.001f) return;
+        area.AbortPanAnimation();
+        area.Layout.ConvertScreenPositionToRelative(screenX, screenY, out float rx, out float ry);
+        area.Layout.ConvertRelativePositionToChildSpace(rx, ry, out float c1x, out float c1y);
+        area.Layout.ClipScale = scale;
+        area.Layout.ConvertRelativePositionToChildSpace(rx, ry, out float c2x, out float c2y);
+        area.VerticalScrollValue -= c2y - c1y;
+        area.HorizontalScrollValue -= c2x - c1x;
+        area.RequireRender = true;
+        area.DirtyLayout();
+    }
     static int _canvasProbed = -1;
 
     /// <summary>
@@ -243,9 +293,10 @@ static class MobileWindowFit
                 Math.Abs(WindowManager.MouseY - MobileWorkspace.CanvasProbeY) > 3) return;
             _canvasProbed = gen;
             var t = ResolvePanTarget(stopAtScroll: true);
+            bool zoomWs = ResolvePanTarget(stopAtScroll: false) is WorkspaceArea;
             Log.Info(Tag, $"Dois dedos #{gen} sobre {YoYoStudio.IDE.WindowManager?.GetMouseOverGadget()?.GetType().Name ?? "-"}: " +
-                          (t != null ? $"arrastar {t.GetType().Name}" : "roda"));
-            MobileWorkspace.AnswerCanvasProbe(gen, t != null);
+                          (t != null ? $"arrastar {t.GetType().Name}" : "roda") + (zoomWs ? ", pinca no workspace" : ", pinca Ctrl+roda"));
+            MobileWorkspace.AnswerCanvasProbe(gen, t != null, zoomWs);
         }
         catch (Exception e) { Log.Warn(Tag, "Sondagem de canvas: " + e.Message); }
     }
@@ -255,17 +306,24 @@ static class MobileWindowFit
     {
         try
         {
-            if (!MobileWorkspace.Take(out float dx, out float dy, out int zoom, out int gesture)) return;
+            if (!MobileWorkspace.Take(out var p)) return;
+            float dx = p.Dx, dy = p.Dy;
+            int zoom = p.Zoom;
             GUIBase? target = null;
-            if (gesture == _panGesture) _panTarget?.TryGetTarget(out target);
+            if (p.Gesture == _panGesture) _panTarget?.TryGetTarget(out target);
             else
             {
-                _panGesture = gesture;
+                _panGesture = p.Gesture;
                 target = ResolvePanTarget(stopAtScroll: false) ?? YoYoStudio.IDE.WindowManager?.GetCurrentWorkspaceArea();
                 _panTarget = target != null ? new WeakReference<GUIBase>(target) : null;
-                Log.Info(Tag, $"Arrastar: alvo {target?.GetType().Name ?? "-"}");
+                _pinchStartScale = target?.Layout.ClipScale ?? 1f;
+                if (target is WorkspaceArea w0)
+                    Log.Info(Tag, $"Arrastar: alvo WorkspaceArea (escala {w0.Layout.ClipScale:F2}, limites {w0.MinScale:F2}..{w0.MaxScale:F2})");
+                else
+                    Log.Info(Tag, $"Arrastar: alvo {target?.GetType().Name ?? "-"}");
             }
             if (target == null || target.Destroyed) return;
+            if (p.HasPinch && target is WorkspaceArea wz) PinchWorkspace(wz, p.PinchRatio, p.PinchCx, p.PinchCy);
 
             float cx = 0, cy = 0;
             if (dx != 0 || dy != 0)

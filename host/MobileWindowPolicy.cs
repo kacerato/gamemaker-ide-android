@@ -155,7 +155,11 @@ static class MobileWindowPolicy
         return r.x >= v.x - 2 && r.y >= v.y - 2 && r.y < v.y + v.h * 0.5f && visW >= Math.Min(r.w, v.w) * 0.6f;
     }
 
-    /// <summary>Zoom 100% e vista ate a janela (canto superior esquerdo se ela for maior que a area).</summary>
+    /// <summary>
+    /// Vista ate a janela (canto superior esquerdo se ela for maior que a area), no zoom em que o usuario
+    /// deixou o workspace. Antes voltava a 100% a cada editor aberto, o que desfazia a pinca de quem
+    /// afastou para abrir outra janela ao lado. Tambem usada pela casca (MobileShell, seletor de editores).
+    /// </summary>
     internal static void ShowWindow(GUIBase win)
     {
         try
@@ -165,7 +169,6 @@ static class MobileWindowPolicy
             for (var p = win.parent; p != null; p = p.parent) if (p is WorkspaceArea a) { area = a; break; }
             if (area == null) return;
             area.AbortPanAnimation();
-            if (area.Layout.ClipScale < 1f) { area.Layout.ClipScale = 1f; area.DirtyLayout(); }
             WindowManager.OnPostLayout.DoOnce(delegate
             {
                 try { if (!win.Destroyed) area.PanToGadget(win, false); }

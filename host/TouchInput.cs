@@ -12,14 +12,17 @@ namespace GmIde;
 //                             arrastar depois disso = arrastar com o esquerdo (arrastar e soltar)
 //   arrastar 1 dedo numa area rolavel -> rolagem direta 1:1 com inercia (MobileScroll)
 //   toque com 2 dedos      -> clique direito no ponto do 1o dedo
-//   arrastar com 2 dedos   -> SDL_MOUSEWHEEL (vertical e horizontal, rolagem natural)
+//   arrastar com 2 dedos   -> num canvas (room, sprite, tileset) ou no workspace: o conteudo acompanha
+//                             os dedos 1:1 nos dois eixos (MobileWorkspace); em listas/Inspetor/codigo:
+//                             SDL_MOUSEWHEEL (vertical e horizontal, rolagem natural)
 //   pinca com 2 dedos      -> Ctrl + SDL_MOUSEWHEEL (zoom nos editores de sprite/room)
+//   modo Mover (barra)     -> um dedo arrasta o canvas sob ele (room...) ou o workspace
 //   Voltar (AC_BACK)       -> Esc
 // Barra de atalhos (ShortcutBar.java / ShortcutBridge.cs): tecla HELP = comandos;
 // "proximo toque = clique direito"; Ctrl/Shift/Alt de um uso soltos depois do
 // proximo clique/tecla; SDL_TEXTINPUT bloqueado com Ctrl/Alt presos.
 // So mexe em eventos de mouse com which == SDL_TOUCH_MOUSEID (os sinteticos do
-// toque). Mouse real passa intacto. SDL_MULTIGESTURE passa intacto.
+// toque). Mouse real passa intacto. SDL_MULTIGESTURE e descartado (ver Handle).
 //
 // Preferencias ("gmide", lidas no Install):
 //   touch_wheel_step_dp  int (padrao 24): deslocamento dos dedos por "notch" da roda
@@ -92,6 +95,16 @@ static unsafe class TouchInput
     /// </summary>
     public static volatile bool PanMode;
     enum TwoKind { Undecided, Pan, Pinch }
+
+    // Dois dedos juntos fora do modo Mover: sobre um canvas (room, sprite, tileset) ou o workspace, o
+    // conteudo acompanha os dedos 1:1 nos dois eixos (MobileWorkspace); sobre listas, Inspetor e codigo
+    // vira roda do mouse. A IDE responde no quadro seguinte (MobileWindowFit.ProbeCanvas); enquanto isso
+    // o deslocamento acumula, e sem resposta em CanvasProbeWaitMs vale a roda.
+    enum TwoTarget { Unknown, Canvas, Wheel }
+    static TwoTarget _twoTarget;
+    static int _twoProbeGen;
+    static long _twoProbeTicks;
+    const int CanvasProbeWaitMs = 200;
 
     // Pinca: cada variacao de 15% na distancia entre os dedos = 1 notch de Ctrl+roda.
     const float PinchStepRatio = 1.15f;
@@ -339,6 +352,14 @@ static unsafe class TouchInput
                 HandleFinger(e);
                 return true; // a IDE so usa FINGERDOWN/UP sem argumentos; deixa passar
 
+            case Sdl.MULTIGESTURE:
+                // Os dois dedos sao nossos (rolagem, arraste do canvas, pinca). O gesto nativo do SDL
+                // chegava junto ao PanArea/WorkspaceArea (PanArea_Multigesture): qualquer variacao de
+                // distancia > 0.03 entre os dedos virava zoom e WindowManager.SetZoomLockGadget, e com o
+                // zoom travado DoMouseWheelEvent descarta toda roda ate o dedo sair. Arrastar a room
+                // para os lados com dois dedos dava zoom tremido ou nada.
+                return false;
+
             default:
                 return true;
         }
@@ -470,6 +491,7 @@ static unsafe class TouchInput
                         if (PanMode && dx * dx + dy * dy > _slopPx * _slopPx)
                         {
                             _mode = Mode.Panning;
+                            MobileWorkspace.BeginGesture();   // alvo: canvas sob o dedo (room...) ou workspace
                             MobileWorkspace.AddPan(_downX - e->x, _downY - e->y);
                             e->motionState = 0;
                             keep = true;
@@ -618,6 +640,18 @@ static unsafe class TouchInput
                         // Ponteiro no centro dos dedos: a IDE rola / da zoom onde o mouse esta.
                         _lastX = (int)_twoStartCx; _lastY = (int)_twoStartCy;
                         inject = new() { Motion(_windowId, _lastX, _lastY) };
+                        if (_twoKind == TwoKind.Pan)
+                        {
+                            if (PanMode) MobileWorkspace.BeginGesture();
+                            else
+                            {
+                                _twoTarget = TwoTarget.Unknown;
+                                _twoProbeTicks = Environment.TickCount64;
+                                MobileWorkspace.CanvasProbeX = _lastX;
+                                MobileWorkspace.CanvasProbeY = _lastY;
+                                _twoProbeGen = ++MobileWorkspace.CanvasProbeGen;
+                            }
+                        }
                         if (_twoKind == TwoKind.Pinch)
                         {
                             _pinchRefDist = _pinchStartDist;
@@ -662,6 +696,28 @@ static unsafe class TouchInput
                     }
                     else
                     {
+                        if (_twoTarget == TwoTarget.Unknown)
+                        {
+                            if (MobileWorkspace.TryGetCanvasProbe(_twoProbeGen, out bool canvas))
+                            {
+                                _twoTarget = canvas ? TwoTarget.Canvas : TwoTarget.Wheel;
+                                if (canvas) MobileWorkspace.BeginGesture();
+                            }
+                            else if (Environment.TickCount64 - _twoProbeTicks > CanvasProbeWaitMs)
+                            {
+                                _twoTarget = TwoTarget.Wheel;
+                                Log.Info(Tag, "Dois dedos: IDE nao respondeu a sondagem de canvas; usando a roda");
+                            }
+                            else break;   // acumula ate a resposta
+                        }
+                        if (_twoTarget == TwoTarget.Canvas)
+                        {
+                            // Conteudo acompanha os dedos (sem a inversao da roda: e manipulacao direta).
+                            MobileWorkspace.AddPan(-_twoAccX, -_twoAccY);
+                            _twoAccX = _twoAccY = 0;
+                            (inject ??= new()).Add(Motion(_windowId, _lastX, _lastY));   // acorda o observador da IDE
+                            break;
+                        }
                         int stepsY = (int)(_twoAccY / _wheelStepPx);
                         int stepsX = (int)(_twoAccX / _wheelStepPx);
                         if (stepsY != 0 || stepsX != 0)

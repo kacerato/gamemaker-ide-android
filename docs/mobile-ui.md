@@ -69,7 +69,12 @@ Ampliar a escala não resolvia: a moldura de desktop (menu, barra de ferramentas
   - Soltar sem mover: clique direito (menu de contexto).
   - Mover depois de armar: arrastar com o esquerdo a partir do ponto do toque. Serve para arrastar e soltar recursos e para selecionar texto no editor de código, onde arrastar rola.
   - Antes, o clique direito saía aos 500 ms, e segurar antes de arrastar abria o menu de contexto.
-- **Dois dedos:** rolagem e pinça, como antes.
+- **Dois dedos juntos num canvas** (room, sprite, tileset, workspace): o conteúdo acompanha os dedos 1:1 nos dois eixos, inclusive para os lados.
+  - Quando o gesto vira arrasto, a IDE diz no quadro seguinte o que há sob o centro dos dedos (`MobileWindowFit.ProbeCanvas`). Em um `PanArea` (como `RoomEditor_Room`) ou no `WorkspaceArea`, o deslocamento muda o `Scroll` do alvo pelo mesmo caminho do arraste com o botão do meio (`MobileWindowFit.ApplyPending`).
+  - Em listas, no Inspetor e no código os dois dedos continuam virando roda do mouse.
+  - Antes, tudo virava roda em notches de 24 dp. Além disso, o `SDL_MULTIGESTURE` nativo chegava ao `PanArea`/`WorkspaceArea`. Qualquer variação de distância entre os dedos acima de 0,03 virava zoom e travava o zoom (`SetZoomLockGadget`). Com ele travado, `DoMouseWheelEvent` descartava toda roda, e arrastar a room para os lados dava zoom tremido ou nada. O filtro agora descarta o `SDL_MULTIGESTURE`, e só a nossa pinça (Ctrl+roda) dá zoom.
+- **Pinça:** zoom (Ctrl+roda) no ponto entre os dedos.
+- **Modo Mover** (barra de atalhos): um dedo arrasta o canvas sob ele (por exemplo, a room) ou, fora de um canvas, o workspace. A pinça dá zoom no mesmo alvo.
 
 ## Janelas
 
@@ -127,6 +132,11 @@ Confirmado:
   - "else floor dir my anim" foi digitado sem nenhuma troca.
   - A barra de símbolos insere `( ) ;` e fica colada no teclado.
   - Menu, barra de ferramentas e faixas de abas somem: a área de código passou de 5 para 9 linhas visíveis.
+
+Confirmado em 08/11/2026 (POCO F7, editor de sala do Tower Defense Template, `rm_level_1`):
+- **Dois dedos na room:** a sondagem respondeu `RoomEditor_Room` em cerca de 15 ms e a room acompanhou os dedos nos dois eixos, sem notches de roda. A pinça deu zoom nos dois sentidos.
+- **Modo Mover na room:** um arraste de 400 px moveu a vista cerca de 395 px para a esquerda, sem desvio vertical. O arraste na diagonal também funcionou.
+- O `adb` não injeta dois dedos nesse aparelho, porque o SELinux bloqueia o `sendevent` no touchscreen. Por isso o gesto de dois dedos foi testado à mão, e o caminho comum (`ApplyPending` → `PanArea.Scroll`) foi testado pelo modo Mover com `input swipe`.
 
 Ajustes feitos durante o teste:
 - O diálogo de imagem passava por `GUIBase.AddWindow`, então o gancho foi movido para lá (dialog-desktop-v2).

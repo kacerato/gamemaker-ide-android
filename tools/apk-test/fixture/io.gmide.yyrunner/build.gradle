@@ -1,0 +1,94 @@
+apply plugin: 'com.android.application'
+
+
+android {
+
+	namespace 'io.gmide.yyrunner'
+	
+    compileSdkVersion 35
+    
+
+	
+	
+	
+
+
+    defaultConfig {
+        applicationId "io.gmide.yyrunner"
+        minSdkVersion 24
+        targetSdkVersion 35
+		multiDexEnabled true
+    }
+
+	signingConfigs {
+        release {
+            storeFile file("C:/Users/donod/Downloads/gamemaker-ide-android/tools/apk-template/work/template.keystore")
+            storePassword "gmide-template"
+            keyAlias "template"
+            keyPassword "gmide-template"
+        }
+    }
+
+    buildTypes {
+        release {
+			signingConfig signingConfigs.release
+			minifyEnabled false
+			shrinkResources false
+			getIsDefault().set(true)
+			ndk {
+                debugSymbolLevel 'FULL'
+            }
+			proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),'proguard-rules.pro'
+			consumerProguardFiles 'proguard-rules.pro'
+            
+        }
+    }
+
+	sourceSets
+	{
+        main {
+            jni {
+                srcDirs = []
+            }
+
+            jniLibs {
+                srcDir 'elibs'
+            }
+        }
+	}
+
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging false
+        }
+    }
+
+	lintOptions {
+checkReleaseBuilds false
+abortOnError false
+}
+
+	
+}
+
+dependencies {
+
+constraints {
+        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.0") {
+            because("kotlin-stdlib-jdk7 is now a part of kotlin-stdlib")
+        }
+        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.0") {
+            because("kotlin-stdlib-jdk8 is now a part of kotlin-stdlib")
+        }
+    }
+
+    implementation 'androidx.legacy:legacy-support-v4:1.0.0'
+	implementation 'androidx.multidex:multidex:2.0.1'
+    implementation files('libs/ini4j-0.5.2.jar')
+	implementation 'androidx.activity:activity:1.9.3'
+implementation 'androidx.appcompat:appcompat:1.7.0'
+
+	
+}
+
+

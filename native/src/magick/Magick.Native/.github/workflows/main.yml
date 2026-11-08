@@ -1,0 +1,536 @@
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+  workflow_dispatch:
+  schedule:
+    - cron:  '0 2 * * *'
+
+name: main
+permissions:
+  contents: read
+jobs:
+  linux:
+    name: linux ${{matrix.quantum}}${{matrix.openmp_flag}} (${{matrix.architecture}})
+    runs-on: ubuntu-24.04
+    container:
+      image: ubuntu:20.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [ x64, arm64 ]
+        quantum: [ Q8, Q16, Q16-HDRI ]
+        openmp: [ noOpenMP, OpenMP ]
+        include:
+          - openmp: OpenMP
+            openmp_flag: -OpenMP
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Install build tools
+      run: ./install.build-tools.sh
+      working-directory: build/linux-${{matrix.architecture}}
+
+    - name: Update ImageMagick.commit to latest commit
+      run: ./update.imagemagick.sh
+      if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      working-directory: src/ImageMagick
+
+    - name: Clone ImageMagick libraries
+      run: ./checkout.sh --no-configure --dependencies-artifact linux-${{matrix.architecture}}-static.zip
+      working-directory: src/ImageMagick
+
+    - name: Build ImageMagick
+      run: ../../../build/shared/build.imagemagick.sh linux ${{matrix.architecture}} ${{matrix.quantum}} ${{matrix.openmp}}
+      working-directory: src/ImageMagick/ImageMagick
+
+    - name: Build Native
+      run: ../../build/shared/build.native.sh linux ${{matrix.architecture}} ${{matrix.quantum}} ${{matrix.openmp}}
+      working-directory: src/Magick.Native
+
+    - name: Copy Native
+      run: ../../build/shared/copy.native.sh ../../artifacts linux ${{matrix.architecture}} ${{matrix.quantum}} ${{matrix.openmp}}
+      working-directory: src/Magick.Native
+
+    - name: Upload library
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-${{matrix.quantum}}-${{matrix.architecture}}-${{matrix.openmp}}
+        path: artifacts
+
+  linux-musl:
+    name: linux musl ${{matrix.quantum}}${{matrix.openmp_flag}} (${{matrix.architecture}})
+    runs-on: ubuntu-24.04
+    container:
+      image: alpine:3.18
+
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [ x64 ]
+        quantum: [ Q8, Q16, Q16-HDRI ]
+        openmp: [ noOpenMP, OpenMP ]
+        include:
+          - openmp: OpenMP
+            openmp_flag: -OpenMP
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Install build tools
+      run: ./install.build-tools.sh
+      working-directory: build/linux-musl-${{matrix.architecture}}
+
+    - name: Update ImageMagick.commit to latest commit
+      run: ./update.imagemagick.sh
+      if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      working-directory: src/ImageMagick
+
+    - name: Clone ImageMagick libraries
+      run: ./checkout.sh --no-configure --dependencies-artifact linux-musl-${{matrix.architecture}}-static.zip
+      working-directory: src/ImageMagick
+
+    - name: Build ImageMagick
+      run: ../../../build/shared/build.imagemagick.sh linux-musl ${{matrix.architecture}} ${{matrix.quantum}} ${{matrix.openmp}}
+      working-directory: src/ImageMagick/ImageMagick
+
+    - name: Build Native
+      run: ../../build/shared/build.native.sh linux-musl ${{matrix.architecture}} ${{matrix.quantum}} ${{matrix.openmp}}
+      working-directory: src/Magick.Native
+
+    - name: Copy Native
+      run: ../../build/shared/copy.native.sh ../../artifacts linux-musl ${{matrix.architecture}} ${{matrix.quantum}} ${{matrix.openmp}}
+      working-directory: src/Magick.Native
+
+    - name: Upload library
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-musl-${{matrix.quantum}}-${{matrix.architecture}}-${{matrix.openmp}}
+        path: artifacts
+
+  macos:
+    name: macOS ${{matrix.quantum}} (${{matrix.architecture}})
+    runs-on: macos-13
+
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [ x64, arm64 ]
+        quantum: [ Q8, Q16, Q16-HDRI ]
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Update ImageMagick.commit to latest commit
+      run: ./update.imagemagick.sh
+      if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      working-directory: src/ImageMagick
+
+    - name: Clone ImageMagick libraries
+      run: ./checkout.sh --no-configure --dependencies-artifact macos-${{matrix.architecture}}-static.zip
+      working-directory: src/ImageMagick
+
+    - name: Install build tools
+      run: ./install.build-tools.sh
+      working-directory: build/macos-${{matrix.architecture}}
+
+    - name: Build ImageMagick
+      run: ../../../build/shared/build.imagemagick.sh macos ${{matrix.architecture}} ${{matrix.quantum}}
+      working-directory: src/ImageMagick/ImageMagick
+
+    - name: Build Native
+      run: ../../build/shared/build.native.sh macos ${{matrix.architecture}} ${{matrix.quantum}}
+      working-directory: src/Magick.Native
+
+    - name: Copy Native
+      run: ../../build/shared/copy.native.sh ../../artifacts macos ${{matrix.architecture}} ${{matrix.quantum}}
+      working-directory: src/Magick.Native
+
+    - name: Upload library
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-${{matrix.quantum}}-${{matrix.architecture}}
+        path: artifacts
+
+  wasm:
+    name: wasm (${{matrix.architecture}})
+    runs-on: ubuntu-24.04
+    container:
+      image: emscripten/emsdk:4.0.7
+
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [ x86 ]
+        quantum: [ Q8 ]
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Update ImageMagick.commit to latest commit
+      run: ./update.imagemagick.sh
+      if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      working-directory: src/ImageMagick
+
+    - name: Clone ImageMagick libraries
+      run: ./checkout.sh --no-configure --dependencies-artifact wasm-${{matrix.architecture}}-static.zip
+      working-directory: src/ImageMagick
+
+    - name: Install build tools
+      run: ./install.build-tools.sh
+      working-directory: build/wasm-${{matrix.architecture}}
+
+    - name: Build ImageMagick
+      run: ../../../build/shared/build.imagemagick.sh wasm ${{matrix.architecture}} ${{matrix.quantum}}
+      working-directory: src/ImageMagick/ImageMagick
+
+    - name: Build Native
+      run: ../../build/shared/build.native.sh wasm ${{matrix.architecture}} ${{matrix.quantum}}
+      working-directory: src/Magick.Native
+
+    - name: Create wasm files
+      run: npm install && npm run publish
+      working-directory: src/wasm-file-creator
+
+    - name: Copy Native
+      run: ../../build/wasm-x86/copy.native.sh ../../artifacts wasm ${{matrix.architecture}}
+      working-directory: src/Magick.Native
+
+    - name: Upload library
+      uses: actions/upload-artifact@v4
+      with:
+        name: wasm-${{matrix.quantum}}-${{matrix.architecture}}
+        path: artifacts
+
+  windows:
+    name: windows ${{matrix.quantum}}${{matrix.hdri_flag}}${{matrix.openmp_flag}} (${{matrix.architecture}})
+    runs-on: windows-2022
+
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [ x86, x64, arm64 ]
+        quantum: [ Q8, Q16 ]
+        openmp: [ noOpenMP, openMP ]
+        hdri: [ noHdri, hdri ]
+        exclude:
+          - quantum: Q8
+            hdri: hdri
+          - architecture: x86
+            openmp: openMP
+        include:
+          - hdri: hdri
+            hdri_flag: '-HDRI'
+          - openmp: openMP
+            openmp_flag: '-OpenMP'
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Update ImageMagick.commit to latest commit
+      run: ./update.imagemagick.cmd
+      if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+      working-directory: src/ImageMagick
+
+    - name: Clone ImageMagick libraries
+      shell: cmd
+      run: checkout-release.cmd ${{matrix.architecture}} ${{matrix.openmp}}
+      working-directory: src/ImageMagick
+
+    - name: Build
+      shell: cmd
+      run: build.cmd Release ${{matrix.quantum}} ${{matrix.architecture}} ${{matrix.hdri}} ${{matrix.openmp}}
+      working-directory: build/windows
+
+    - name: Copy Native
+      shell: cmd
+      run: |
+        call copy-native.cmd ..\..\artifacts Release${{matrix.quantum}}${{matrix.hdri_flag}}${{matrix.openmp_flag}} ${{matrix.architecture}}
+      working-directory: build/windows
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-${{matrix.quantum}}${{matrix.hdri_flag}}-${{matrix.architecture}}${{matrix.openmp_flag}}
+        path: artifacts
+
+  verify-linux-x64:
+    name: Verify Linux (x64)
+    runs-on: ubuntu-24.04
+    needs:
+      - linux
+
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - ubuntu:20.04
+          - ubuntu:22.04
+          - ubuntu:24.04
+          - tgagor/centos:stream9
+          - mcr.microsoft.com/dotnet/aspnet:latest
+          - mcr.microsoft.com/dotnet/runtime:8.0
+          - amazon/aws-lambda-dotnet:8
+          - public.ecr.aws/lambda/dotnet:8-x86_64
+
+    container:
+      image: ${{matrix.image}}
+
+    steps:
+
+    - name: Install git
+      run: |
+        if [ -f "/bin/yum" ]; then
+          yum install -y git
+        elif [ -f "/bin/dnf" ]; then
+          dnf install -y git
+        else
+          apt-get update -y
+          apt-get install -y git
+        fi
+
+    - name: Checkout
+      uses: actions/checkout@v5
+      with:
+        fetch-depth: 1
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v5
+      with:
+        merge-multiple: true
+
+    - name: Verify Native
+      run: |
+        build/shared/verify.native.sh . linux x64
+        build/shared/verify.native.sh . linux x64 OpenMP
+
+  verify-linux-arm64:
+    name: Verify Linux (arm64)
+    runs-on: ubuntu-24.04-arm
+    needs:
+      - linux
+
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - mcr.microsoft.com/dotnet/sdk:8.0-jammy-arm64v8
+
+    container:
+      image: ${{matrix.image}}
+
+    steps:
+
+    - name: Install git
+      run: |
+        apt-get update -y
+        apt-get install -y git
+
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v5
+      with:
+        merge-multiple: true
+
+    - name: Verify Native
+      run: |
+        build/shared/verify.native.sh . linux arm64
+        build/shared/verify.native.sh . linux arm64 OpenMP
+
+  verify-linux-musl-x64:
+    name: Verify Linux musl (x64) (${{matrix.image}})
+    runs-on: ubuntu-24.04
+    needs:
+      - linux-musl
+
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - alpine:latest
+          - mcr.microsoft.com/dotnet/aspnet:8.0-alpine
+          - mcr.microsoft.com/dotnet/runtime:8.0-alpine
+
+    container:
+      image: ${{matrix.image}}
+
+    steps:
+
+    - name: Install git and bash
+      run: |
+        apk update
+        apk add bash git
+
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v5
+      with:
+        merge-multiple: true
+
+    - name: Verify Native
+      run: |
+        build/shared/verify.native.sh . linux-musl x64
+        build/shared/verify.native.sh . linux-musl x64 OpenMP
+
+  verify-macos:
+    name: Verify MacOS (${{matrix.architecture}}) (${{matrix.os}})
+    runs-on: ${{matrix.os}}
+    needs:
+      - macos
+
+    strategy:
+      fail-fast: false
+      matrix:
+        architecture: [ x64, arm64 ]
+        os: [ macos-13, macos-14 ]
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v5
+      with:
+        merge-multiple: true
+
+    - name: Verify MacOS
+      run: build/shared/verify.native.macos.sh . macos ${{matrix.architecture}}
+
+  metadata:
+    name: Metadata
+    runs-on: ubuntu-24.04
+    needs:
+      - verify-linux-x64
+      - verify-linux-arm64
+      - verify-linux-musl-x64
+      - verify-macos
+      - wasm
+      - windows
+    outputs:
+      version: ${{steps.set-version.outputs.version}}
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v5
+      with:
+        name: windows-Q8-arm64
+
+    - name: Set version
+      id: set-version
+      run: echo "version=$(date +'%Y.%-m%d.%-H%M')" >> $GITHUB_OUTPUT
+
+    - name: Copy NOTICE.txt and create libraries.md
+      run: |
+        mkdir -p artifacts/metadata
+        cd artifacts/metadata
+
+        cp ../../NOTICE.txt NOTICE.txt
+
+        commit=$(git rev-parse HEAD)
+        echo "# Libraries" >> libraries.md
+        echo "Magick.Native [$commit](https://github.com/dlemstra/Magick.Native/commit/$commit) is build with the following libraries:" >> libraries.md
+        echo "" >> libraries.md
+        sed -n 's/^\[ \(.*\) \]/- \1/p' ../../NOTICE.txt >> libraries.md
+
+    - name: Upload metadata
+      uses: actions/upload-artifact@v4
+      with:
+        name: metadata
+        path: artifacts
+
+  publish-dotnet:
+    name: Publish .NET library
+    if: github.event_name != 'schedule'
+    runs-on: windows-2022
+    needs:
+      - metadata
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Download artifacts
+      uses: actions/download-artifact@v5
+      with:
+        merge-multiple: true
+        path: publish/dotnet/files
+
+    - name: Create NuGet package
+      run: ./publish.ps1 -version ${{needs.metadata.outputs.version}} -destination ..\..\artifacts
+      working-directory: publish/dotnet
+
+    - name: Upload NuGet package
+      if: github.event_name != 'pull_request'
+      working-directory: publish/dotnet
+      run: |
+        dotnet nuget add source --name github "https://nuget.pkg.github.com/dlemstra/index.json"
+        $file = Get-ChildItem -Path . -Recurse -Filter *.nupkg | Select -First 1
+        dotnet nuget push $file.FullName --api-key ${{ secrets.GITHUB_TOKEN }} --source "github"
+
+  publish-wasm-x86:
+    name: Publish WASM library
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-24.04
+    needs:
+      - metadata
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v5
+
+    - name: Download wasm library
+      uses: actions/download-artifact@v5
+      with:
+        name: wasm-Q8-x86
+        path: publish/wasm/files
+
+    - uses: actions/setup-node@v6
+      with:
+        node-version: 20
+        registry-url: https://npm.pkg.github.com
+        scope: '@dlemstra'
+
+    - name: Create NPM package
+      run: ./publish.sh --version ${{needs.metadata.outputs.version}}
+      working-directory: publish/wasm
+
+    - name: Publish NPM package
+      if: github.event_name != 'pull_request'
+      run: npm publish
+      working-directory: publish/wasm/files
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

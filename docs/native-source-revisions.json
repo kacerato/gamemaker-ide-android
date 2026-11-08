@@ -1,0 +1,47 @@
+[
+  {
+    "path": "native/src/FNA3D",
+    "revision": "d01538ee92e68734dcd7812067da6aa2d5861e4d",
+    "localFileCount": 89
+  },
+  {
+    "path": "native/src/freetype",
+    "revision": "920c5502cc3ddda88f6c7d85ee834ac611bb11cc",
+    "localFileCount": 730
+  },
+  {
+    "path": "native/src/oniguruma",
+    "revision": "e62a8e5ec123bb91651d297e6f72c84d53e3cff8",
+    "localFileCount": 178
+  },
+  {
+    "path": "native/src/SDL2",
+    "revision": "8a5ba43d00252c6c8b33c9aa4f1048222955ab4d",
+    "localFileCount": 1714
+  },
+  {
+    "path": "native/src/yoga",
+    "revision": "1b9b878b9a72e06c2bfb175fe55c4150278573ee",
+    "localFileCount": 512
+  },
+  {
+    "path": "native/src/FNA3D/MojoShader",
+    "revision": "ad5dff84830c2863c841f4b1f4e3df78c705b383",
+    "localFileCount": 43
+  },
+  {
+    "path": "native/src/magick/ImageMagick",
+    "revision": "a3b13d143fd7dea44cd71d31aa02f411b597688f",
+    "localFileCount": 2250
+  },
+  {
+    "path": "native/src/magick/Magick.Native",
+    "revision": "381705918d2c74a1a9b46702259c8cfc3f4de344",
+    "localFileCount": 177
+  },
+  {
+    "path": "native/src/magick/Magick.NET",
+    "revision": "4cc8cfcaa7a554de356ff43a79e86f0509997960",
+    "localFileCount": 0
+  }
+]

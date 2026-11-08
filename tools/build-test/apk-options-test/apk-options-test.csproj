@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings><RollForward>Major</RollForward>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../host/ApkExport/ApkKeystoreSelection.cs" Link="ApkKeystoreSelection.cs" />
+    <Compile Include="../../../host/ApkExport/AndroidGameOptions.cs" Link="AndroidGameOptions.cs" />
+    <Compile Include="../../../host/AndroidTargetSelection.cs" Link="AndroidTargetSelection.cs" />
+    <Compile Include="../../../host/AndroidOptionsPatches.cs" Link="AndroidOptionsPatches.cs" />
+    <Compile Include="../../../host/ApkExport/AndroidProjectIcons.cs" Link="AndroidProjectIcons.cs" />
+    <PackageReference Include="Mono.Cecil" Version="0.11.6" />
+  </ItemGroup>
+</Project>

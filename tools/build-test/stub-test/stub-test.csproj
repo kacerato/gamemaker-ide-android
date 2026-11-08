@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Teste no PC do caminho do Android: stub nativo (gmexec.exe, mesmo gmexec.c) -> socket unix
+       -> BuildBridge num PROCESSO SEPARADO (papel do servico :build) -> Igor.dll + GMAssetCompiler. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RollForward>Major</RollForward>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\..\host\BuildBridge.cs" Link="BuildBridge.cs" />
+    <Compile Include="..\..\..\host\RuntimeIntegrity.cs" Link="RuntimeIntegrity.cs" />
+  </ItemGroup>
+</Project>

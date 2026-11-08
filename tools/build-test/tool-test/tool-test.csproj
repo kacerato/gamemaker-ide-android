@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Teste no PC do caminho do Android para as ferramentas externas da IDE:
+       "IDE" (Process.Start como CmdProcess / ProcessLanguageServer) -> gmexec.exe (mesmo gmexec.c)
+       -> socket unix -> BuildBridge + ToolBridge num PROCESSO SEPARADO (papel do servico :build)
+       -> ProjectTool.dll (extraido do ProjectTool.exe) / GameMakerLanguageServer.dll em ALC proprio. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RollForward>Major</RollForward>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\..\host\BuildBridge.cs" Link="BuildBridge.cs" />
+    <Compile Include="..\..\..\host\RuntimeIntegrity.cs" Link="RuntimeIntegrity.cs" />
+    <Compile Include="..\..\..\host\ToolBridge.cs" Link="ToolBridge.cs" />
+    <Compile Include="..\..\..\host\AssemblyScanPatches.cs" Link="AssemblyScanPatches.cs" />
+    <PackageReference Include="Mono.Cecil" Version="0.11.6" />
+  </ItemGroup>
+</Project>

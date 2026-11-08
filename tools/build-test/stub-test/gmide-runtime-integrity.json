@@ -1,0 +1,24 @@
+﻿{
+    "format":  1,
+    "runtime":  "runtime-2026.0.0.23",
+    "files":  {
+                  "bin/igor/windows/x64/Igor.exe":  {
+                                                        "sha256":  "301EA5BB2AA79B27B89921A3A7555BB44F4722C5A0CB2E1D70B2AE3E7E3A599E",
+                                                        "size":  37653824,
+                                                        "org":  "YOYO GAMES LIMITED",
+                                                        "thumbprint":  "A69F57C54107F4258DF8A900A9DE05F1A73BBEC3"
+                                                    },
+                  "bin/assetcompiler/windows/x64/GMAssetCompiler.dll":  {
+                                                                            "sha256":  "F057BA835D732C8C10B75F9B6E67A13051FA96D203F6257BC05E5AF776B43DAA",
+                                                                            "size":  2151496,
+                                                                            "org":  "YOYO GAMES LIMITED",
+                                                                            "thumbprint":  "A69F57C54107F4258DF8A900A9DE05F1A73BBEC3"
+                                                                        },
+                  "bin/webserver/windows/x64/GMWebServer.dll":  {
+                                                                    "sha256":  "A1300AAA9EF30E235048BC9A1F22EA4AC7F1CD8C21F74C883D4E37B5598C1B28",
+                                                                    "size":  272456,
+                                                                    "org":  "YOYO GAMES LIMITED",
+                                                                    "thumbprint":  "A69F57C54107F4258DF8A900A9DE05F1A73BBEC3"
+                                                                }
+              }
+}

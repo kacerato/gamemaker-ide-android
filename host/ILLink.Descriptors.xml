@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A IDE e carregada em tempo de execucao, entao o linker nao ve o que ela usa.
+     framework-roots.props protege as fachadas (System.Xml.*, System.Runtime...),
+     mas a implementacao fica nos System.Private.*: sem isto o linker corta, por
+     exemplo, partes do XmlDocument/XPath e a IDE nao le os layouts (menu vazio,
+     crash no Initialise 4.5). Tambem mantem o CoreLib inteiro (RegionInfo etc.). -->
+<linker>
+  <assembly fullname="System.Private.CoreLib" preserve="all" />
+  <assembly fullname="System.Private.Xml" preserve="all" />
+  <assembly fullname="System.Private.Xml.Linq" preserve="all" />
+  <assembly fullname="System.Private.Uri" preserve="all" />
+  <assembly fullname="System.Private.DataContractSerialization" preserve="all" />
+  <!-- NetFix.cs: HttpClient() padrao no Android cria este handler por reflexao (plugins da IDE
+       sao carregados em runtime e o linker nao os ve). -->
+  <assembly fullname="Mono.Android">
+    <type fullname="Xamarin.Android.Net.AndroidMessageHandler" preserve="all" />
+  </assembly>
+</linker>

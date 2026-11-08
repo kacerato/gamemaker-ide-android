@@ -1,0 +1,78 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Host Android da IDE do GameMaker (uso pessoal; nao distribuir).
+       Os assemblies da YoYo sao referenciados so para compilar (Private=false)
+       e carregados em tempo de execucao da pasta "ide" no armazenamento do app. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>26</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationId>io.gmide.android</ApplicationId>
+    <ApplicationVersion>2</ApplicationVersion>
+    <ApplicationDisplayVersion>0.2.0</ApplicationDisplayVersion>
+    <RuntimeIdentifier>android-arm64</RuntimeIdentifier>
+    <EnableDefaultAndroidItems>false</EnableDefaultAndroidItems>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <AndroidManifest>AndroidManifest.xml</AndroidManifest>
+    <!-- A IDE usa reflexao pesada e carrega plugins dinamicamente. -->
+    <AndroidLinkMode>SdkOnly</AndroidLinkMode>
+    <AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+    <RunAOTCompilation>false</RunAOTCompilation>
+    <!-- Marshal methods (padrao no Release do .NET 8): build incremental gerava um
+         libxamarin-app.so descasado e o Mono abortava na partida
+         (icall.c "!only_unmanaged_callers_only"). Registro JNI dinamico e estavel. -->
+    <AndroidEnableMarshalMethods>false</AndroidEnableMarshalMethods>
+    <AndroidUseAssemblyStore>false</AndroidUseAssemblyStore>
+    <EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+    <GmInstall>C:\Program Files\GameMaker-LTS2026</GmInstall>
+    <AndroidSdkDirectory>$(LOCALAPPDATA)\Android\Sdk</AndroidSdkDirectory>
+    <JavaSdkDirectory>C:\Program Files\Eclipse Adoptium\jdk-21.0.12.8-hotspot</JavaSdkDirectory>
+    <LatestSupportedJavaVersion>21.0.99</LatestSupportedJavaVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="IDE"><HintPath>$(GmInstall)\IDE.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="OSCore"><HintPath>$(GmInstall)\OSCore.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Utils"><HintPath>$(GmInstall)\Utils.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Graphics"><HintPath>$(GmInstall)\Graphics.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <AndroidResource Include="Resources\**\*" />
+    <!-- Gerado por build-java.sh (SDL + GmIdeActivity); sem bindings C#. -->
+    <AndroidLibrary Include="..\native\out\java\gmide-java.jar" Bind="false" Pack="false" />
+    <AndroidLibrary Include="..\native\out-runner\libs\*.aar;..\native\out-runner\libs\*.jar" Bind="false" />
+    <AndroidNativeLibrary Include="..\native\out-runner\arm64-v8a\*.so" Abi="arm64-v8a" />
+    <!-- O SDK inclui *.java automaticamente e geraria bindings; o jar acima ja tem tudo. -->
+    <AndroidJavaSource Remove="Java\**\*.java" />
+    <AndroidNativeLibrary Include="..\native\out\arm64-v8a\*.so" Abi="arm64-v8a" />
+    <!-- HarfBuzzSharp, IDENativeLib, tinyfiledialogs (native/extras) -->
+    <AndroidNativeLibrary Include="..\native\out-extras\arm64-v8a\*.so" Abi="arm64-v8a" />
+    <!-- Magick.Native (native/magick), quando compilado -->
+    <AndroidNativeLibrary Include="..\native\out-magick\arm64-v8a\*.so" Abi="arm64-v8a" />
+    <!-- ffmpeg/ffprobe (native/ffmpeg; executaveis PIE) para a conversao de audio do GMAssetCompiler -->
+    <AndroidNativeLibrary Include="..\native\out-ffmpeg\arm64-v8a\*.so" Abi="arm64-v8a" />
+    <!-- Stub ${igor_path}/${webserver_path} do Build/Run (native/gmexec/build.sh; executavel PIE) -->
+    <AndroidNativeLibrary Include="..\native\out-gmexec\arm64-v8a\libgmexec.so" Abi="arm64-v8a" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- "Gerar APK": modelo do runner Android compilado no PC (tools/apk-template/make-template.py) -->
+    <AndroidAsset Include="..\tools\apk-template\out\gmide-runner-template-slim.apk" Link="Assets\apk-template\template.apk" />
+    <AndroidAsset Include="..\tools\apk-template\out\template.json" Link="Assets\apk-template\template.json" />
+    <AndroidAsset Include="..\tools\apk-template\out\runtime-android.zip" Link="Assets\runtime-modules\android.zip" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Patches de IL na copia da IDE dentro do app (IdePatches.cs) -->
+    <PackageReference Include="Mono.Cecil" Version="0.11.6" />
+  </ItemGroup>
+
+  <!-- Mantem inteiros todos os assemblies do .NET que a IDE referencia. -->
+  <ItemGroup>
+    <TrimmerRootDescriptor Include="ILLink.Descriptors.xml" />
+  </ItemGroup>
+  <Import Project="framework-roots.props" />
+</Project>

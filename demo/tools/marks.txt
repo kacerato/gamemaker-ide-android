@@ -1,0 +1,15 @@
+1794144716 abre IDE
+1794144760 Novo projeto
+1794144818 criar sprite personagem
+1794144888 import strip personagem
+1794145253 bug: import strip inspetor nao faz nada
+1794145492 bug: dialogo converter quadros nao cabe/nao rola
+1794145737 spr_jogador 16 quadros ok
+1794146176 objetos
+1794146691 digitando step jogador
+1794146826 autocorrect gboard no editor; reescrevendo
+1794147035 room
+1794147341 bug: paleta de tiles nao seleciona com toque
+1794147488 F5 rodar
+1794147538 jogando
+1794147778 parou jogo

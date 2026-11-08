@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-feature android:glEsVersion="0x00030000" android:required="true" />
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+  <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+  <!-- "Gerar APK": instalar o jogo gerado (PackageInstaller; docs/apk-export.md) -->
+  <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+  <application android:label="GM IDE Android"
+               android:icon="@mipmap/ic_launcher"
+               android:roundIcon="@mipmap/ic_launcher_round"
+               android:name="io.gmide.MainApplication"
+               android:hardwareAccelerated="true"
+               android:largeHeap="true"
+               android:extractNativeLibs="true">
+    <activity android:name="io.gmide.GmIdeActivity"
+              android:exported="true"
+              android:label="GM IDE Android"
+              android:launchMode="singleInstance"
+              android:configChanges="layoutDirection|locale|orientation|uiMode|screenLayout|screenSize|smallestScreenSize|keyboard|keyboardHidden|navigation"
+              android:preferMinimalPostProcessing="true"
+              android:windowSoftInputMode="adjustNothing"
+              android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+              android:screenOrientation="sensorLandscape">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+    <!-- Run do alvo GX (runner.wasm) num WebView; aberto pelo BuildService (:build).
+         O servico io.gmide.BuildService (android:process=":build") vem do atributo
+         [Service] em host/BuildService.cs. Ver docs/build-pipeline.md. -->
+    <activity android:name="io.gmide.GameRunnerActivity"
+              android:exported="false"
+              android:label="Jogo (GX)"
+              android:launchMode="singleTask"
+              android:taskAffinity="io.gmide.android.runner"
+              android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+              android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode"
+              android:screenOrientation="sensorLandscape" />
+    <!-- Declare before AAR merging so .NET generates the MonoRuntimeProvider for :game. -->
+    <activity android:name="io.gmide.yyrunner.RunnerActivity"
+              android:process=":game"
+               android:supportsPictureInPicture="true"
+               android:resizeableActivity="true"
+              android:exported="false"
+              android:taskAffinity="io.gmide.android.game"
+              android:excludeFromRecents="true"
+              android:theme="@style/Theme.AppCompat.NoActionBar"
+              android:configChanges="orientation|keyboard|keyboardHidden|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|layoutDirection|locale|mcc|mnc|navigation|touchscreen" />
+    <!-- "Gerar APK" (docs/apk-export.md): popup translucido sobre a IDE (paisagem, como ela)
+         e o retorno do PackageInstaller -->
+    <!-- Reinicio da IDE (PlatformBridge.SpawnNewIde): processo proprio espera a IDE terminar e a reabre -->
+    <activity android:name="io.gmide.RestartActivity"
+              android:exported="false"
+              android:process=":restart"
+              android:excludeFromRecents="true"
+              android:noHistory="true"
+              android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+    <activity android:name="io.gmide.ApkExportActivity"
+              android:exported="false"
+              android:label="Gerar APK"
+              android:taskAffinity="io.gmide.android.apk"
+              android:excludeFromRecents="true"
+              android:screenOrientation="sensorLandscape"
+              android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode"
+              android:windowSoftInputMode="adjustPan|stateHidden"
+              android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen" />
+    <activity android:name="io.gmide.ApkInstaller$Status"
+              android:exported="false"
+              android:excludeFromRecents="true"
+              android:taskAffinity="io.gmide.android.apk"
+              android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+  </application>
+</manifest>

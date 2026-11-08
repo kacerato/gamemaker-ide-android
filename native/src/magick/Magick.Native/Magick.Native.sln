@@ -1,0 +1,271 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32014.148
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Magick.Native", "src\Magick.Native\Magick.Native.vcxproj", "{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{6C3DBF08-7B17-4B45-BA79-E3DB64032574}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "linux-x64", "linux-x64", "{DBA3E7EC-F1B9-46E3-92D4-BB3001734A90}"
+	ProjectSection(SolutionItems) = preProject
+		build\linux-x64\install.build-tools.sh = build\linux-x64\install.build-tools.sh
+		build\linux-x64\settings.sh = build\linux-x64\settings.sh
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "macos-x64", "macos-x64", "{12B5113A-B68A-4DDF-8A74-A5D615AFF49A}"
+	ProjectSection(SolutionItems) = preProject
+		build\macos-x64\install.build-tools.sh = build\macos-x64\install.build-tools.sh
+		build\macos-x64\settings.sh = build\macos-x64\settings.sh
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "metadata", "metadata", "{C8420103-07D2-459E-9EFD-8FC57AA569E0}"
+	ProjectSection(SolutionItems) = preProject
+		build\metadata\create.metadata.ps1 = build\metadata\create.metadata.ps1
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "windows", "windows", "{5B17570E-CC0B-40D4-A4FE-2FDCD1E55DED}"
+	ProjectSection(SolutionItems) = preProject
+		build\windows\build.cmd = build\windows\build.cmd
+		build\windows\copy-native.cmd = build\windows\copy-native.cmd
+		build\windows\copy-resources.cmd = build\windows\copy-resources.cmd
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "wasm-x86", "wasm-x86", "{8DAB5BB6-E6EF-46C2-9F45-D779E1D1AACC}"
+	ProjectSection(SolutionItems) = preProject
+		build\wasm-x86\copy.native.sh = build\wasm-x86\copy.native.sh
+		build\wasm-x86\install.build-tools.sh = build\wasm-x86\install.build-tools.sh
+		build\wasm-x86\pre.js = build\wasm-x86\pre.js
+		build\wasm-x86\settings.sh = build\wasm-x86\settings.sh
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{AA38A23D-B639-4B56-BBCC-43446386FE8B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ImageMagick", "ImageMagick", "{BDFD18E8-BA42-420C-907E-9EC0C9E0A6B0}"
+	ProjectSection(SolutionItems) = preProject
+		src\ImageMagick\checkout-development.cmd = src\ImageMagick\checkout-development.cmd
+		src\ImageMagick\checkout-release.cmd = src\ImageMagick\checkout-release.cmd
+		src\ImageMagick\checkout.sh = src\ImageMagick\checkout.sh
+		src\ImageMagick\ImageMagick.commit = src\ImageMagick\ImageMagick.commit
+		src\ImageMagick\update.imagemagick.cmd = src\ImageMagick\update.imagemagick.cmd
+		src\ImageMagick\update.imagemagick.sh = src\ImageMagick\update.imagemagick.sh
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{1520A3A2-D586-471F-9C70-80D43532A0C6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "windows", "windows", "{8E1216C8-EAE4-4E2D-B717-BAB023683820}"
+	ProjectSection(SolutionItems) = preProject
+		tools\windows\find-bash.cmd = tools\windows\find-bash.cmd
+		tools\windows\init.visualstudio.cmd = tools\windows\init.visualstudio.cmd
+		tools\windows\utils.ps1 = tools\windows\utils.ps1
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "publish", "publish", "{4D076C4F-5298-40AC-BE34-02EA77AF7F06}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "dotnet", "dotnet", "{6931BC75-E765-4F1A-A961-6905E8308664}"
+	ProjectSection(SolutionItems) = preProject
+		publish\dotnet\Magick.Native.nuspec = publish\dotnet\Magick.Native.nuspec
+		publish\dotnet\publish.ps1 = publish\dotnet\publish.ps1
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "wasm", "wasm", "{7821CD6E-88F1-42CE-81A0-D67F7767ECC8}"
+	ProjectSection(SolutionItems) = preProject
+		publish\wasm\package.json = publish\wasm\package.json
+		publish\wasm\publish.sh = publish\wasm\publish.sh
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "linux-musl-x64", "linux-musl-x64", "{F9F51AB1-7683-4E2D-B746-4360926ABDE9}"
+	ProjectSection(SolutionItems) = preProject
+		build\linux-musl-x64\install.build-tools.sh = build\linux-musl-x64\install.build-tools.sh
+		build\linux-musl-x64\settings.sh = build\linux-musl-x64\settings.sh
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "linux-arm64", "linux-arm64", "{950C68AA-029F-4213-BCC8-20CB145E15CA}"
+	ProjectSection(SolutionItems) = preProject
+		build\linux-arm64\cross-compilation.cmake = build\linux-arm64\cross-compilation.cmake
+		build\linux-arm64\install.build-tools.sh = build\linux-arm64\install.build-tools.sh
+		build\linux-arm64\settings.sh = build\linux-arm64\settings.sh
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{4B73C473-ECF3-4683-A81A-47E85061A7C6}"
+	ProjectSection(SolutionItems) = preProject
+		.github\dependabot.yml = .github\dependabot.yml
+		.github\FUNDING.yml = .github\FUNDING.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{3DF7FEA1-1839-4123-9B58-E8D86CC981C7}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\codeql-analysis.yml = .github\workflows\codeql-analysis.yml
+		.github\workflows\main.yml = .github\workflows\main.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "shared", "shared", "{C9FDCB6E-2B4E-4E3B-A0B3-336D575E0E87}"
+	ProjectSection(SolutionItems) = preProject
+		build\shared\build.imagemagick.sh = build\shared\build.imagemagick.sh
+		build\shared\build.native.sh = build\shared\build.native.sh
+		build\shared\copy.native.sh = build\shared\copy.native.sh
+		build\shared\verify.native.macos.sh = build\shared\verify.native.macos.sh
+		build\shared\verify.native.sh = build\shared\verify.native.sh
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "macos-arm64", "macos-arm64", "{BFCD9FE6-479F-4D5E-B4BA-046317AD8334}"
+	ProjectSection(SolutionItems) = preProject
+		build\macos-arm64\install.build-tools.sh = build\macos-arm64\install.build-tools.sh
+		build\macos-arm64\settings.sh = build\macos-arm64\settings.sh
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "wasm-file-creator", "wasm-file-creator", "{BE2DF871-363E-46ED-A999-81C5D6A232D7}"
+	ProjectSection(SolutionItems) = preProject
+		src\wasm-file-creator\package.json = src\wasm-file-creator\package.json
+		src\wasm-file-creator\tsconfig.json = src\wasm-file-creator\tsconfig.json
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{16F5433C-4F98-4CE9-A40E-C768FF818761}"
+	ProjectSection(SolutionItems) = preProject
+		src\wasm-file-creator\src\code-parser.ts = src\wasm-file-creator\src\code-parser.ts
+		src\wasm-file-creator\src\constants-writer.ts = src\wasm-file-creator\src\constants-writer.ts
+		src\wasm-file-creator\src\index.ts = src\wasm-file-creator\src\index.ts
+		src\wasm-file-creator\src\type-definition-writer.ts = src\wasm-file-creator\src\type-definition-writer.ts
+		src\wasm-file-creator\src\xml-resource-file.ts = src\wasm-file-creator\src\xml-resource-file.ts
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".devcontainer", ".devcontainer", "{A1FC197D-F3DB-4735-BAFF-52D176C097E8}"
+	ProjectSection(SolutionItems) = preProject
+		.devcontainer\Dockerfile = .devcontainer\Dockerfile
+		.devcontainer\post-create-command.sh = .devcontainer\post-create-command.sh
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "linux-x64", "linux-x64", "{F6BD95D6-AD2E-492F-99C6-95D17D966290}"
+	ProjectSection(SolutionItems) = preProject
+		.devcontainer\linux-x64\devcontainer.json = .devcontainer\linux-x64\devcontainer.json
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "wasm-x64", "wasm-x64", "{5F1BF474-B859-455E-8922-356BEDD90521}"
+	ProjectSection(SolutionItems) = preProject
+		.devcontainer\wasm-x86\devcontainer.json = .devcontainer\wasm-x86\devcontainer.json
+		.devcontainer\wasm-x86\post-create-command.sh = .devcontainer\wasm-x86\post-create-command.sh
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "linux-arm64", "linux-arm64", "{9990A9C0-C8EA-444B-8594-EF7888779B1D}"
+	ProjectSection(SolutionItems) = preProject
+		.devcontainer\linux-arm64\devcontainer.json = .devcontainer\linux-arm64\devcontainer.json
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "linux-musl-x64", "linux-musl-x64", "{C354B5EC-5E74-4929-8520-4205E296918B}"
+	ProjectSection(SolutionItems) = preProject
+		.devcontainer\linux-musl-x64\devcontainer.json = .devcontainer\linux-musl-x64\devcontainer.json
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		DebugQ16|arm64 = DebugQ16|arm64
+		DebugQ16|x64 = DebugQ16|x64
+		DebugQ16|x86 = DebugQ16|x86
+		DebugQ16-HDRI|arm64 = DebugQ16-HDRI|arm64
+		DebugQ16-HDRI|x64 = DebugQ16-HDRI|x64
+		DebugQ16-HDRI|x86 = DebugQ16-HDRI|x86
+		DebugQ8|arm64 = DebugQ8|arm64
+		DebugQ8|x64 = DebugQ8|x64
+		DebugQ8|x86 = DebugQ8|x86
+		ReleaseQ16|arm64 = ReleaseQ16|arm64
+		ReleaseQ16|x64 = ReleaseQ16|x64
+		ReleaseQ16|x86 = ReleaseQ16|x86
+		ReleaseQ16-HDRI|arm64 = ReleaseQ16-HDRI|arm64
+		ReleaseQ16-HDRI|x64 = ReleaseQ16-HDRI|x64
+		ReleaseQ16-HDRI|x86 = ReleaseQ16-HDRI|x86
+		ReleaseQ16-HDRI-OpenMP|arm64 = ReleaseQ16-HDRI-OpenMP|arm64
+		ReleaseQ16-HDRI-OpenMP|x64 = ReleaseQ16-HDRI-OpenMP|x64
+		ReleaseQ16-HDRI-OpenMP|x86 = ReleaseQ16-HDRI-OpenMP|x86
+		ReleaseQ16-OpenMP|arm64 = ReleaseQ16-OpenMP|arm64
+		ReleaseQ16-OpenMP|x64 = ReleaseQ16-OpenMP|x64
+		ReleaseQ16-OpenMP|x86 = ReleaseQ16-OpenMP|x86
+		ReleaseQ8|arm64 = ReleaseQ8|arm64
+		ReleaseQ8|x64 = ReleaseQ8|x64
+		ReleaseQ8|x86 = ReleaseQ8|x86
+		ReleaseQ8-OpenMP|arm64 = ReleaseQ8-OpenMP|arm64
+		ReleaseQ8-OpenMP|x64 = ReleaseQ8-OpenMP|x64
+		ReleaseQ8-OpenMP|x86 = ReleaseQ8-OpenMP|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.DebugQ16|arm64.ActiveCfg = DebugQ16|ARM64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.DebugQ16|arm64.Build.0 = DebugQ16|ARM64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.DebugQ16|x64.ActiveCfg = DebugQ16|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.DebugQ16|x64.Build.0 = DebugQ16|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.DebugQ16|x86.ActiveCfg = DebugQ16|Win32
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.DebugQ16|x86.Build.0 = DebugQ16|Win32
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.DebugQ16-HDRI|arm64.ActiveCfg = DebugQ16-HDRI|ARM64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.DebugQ16-HDRI|arm64.Build.0 = DebugQ16-HDRI|ARM64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.DebugQ16-HDRI|x64.ActiveCfg = DebugQ16-HDRI|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.DebugQ16-HDRI|x64.Build.0 = DebugQ16-HDRI|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.DebugQ16-HDRI|x86.ActiveCfg = DebugQ16-HDRI|Win32
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.DebugQ16-HDRI|x86.Build.0 = DebugQ16-HDRI|Win32
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.DebugQ8|arm64.ActiveCfg = DebugQ8|ARM64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.DebugQ8|arm64.Build.0 = DebugQ8|ARM64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.DebugQ8|x64.ActiveCfg = DebugQ8|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.DebugQ8|x64.Build.0 = DebugQ8|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.DebugQ8|x86.ActiveCfg = DebugQ8|Win32
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.DebugQ8|x86.Build.0 = DebugQ8|Win32
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16|arm64.ActiveCfg = ReleaseQ16|ARM64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16|arm64.Build.0 = ReleaseQ16|ARM64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16|x64.ActiveCfg = ReleaseQ16|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16|x64.Build.0 = ReleaseQ16|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16|x86.ActiveCfg = ReleaseQ16|Win32
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16|x86.Build.0 = ReleaseQ16|Win32
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16-HDRI|arm64.ActiveCfg = ReleaseQ16-HDRI|ARM64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16-HDRI|arm64.Build.0 = ReleaseQ16-HDRI|ARM64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16-HDRI|x64.ActiveCfg = ReleaseQ16-HDRI|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16-HDRI|x64.Build.0 = ReleaseQ16-HDRI|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16-HDRI|x86.ActiveCfg = ReleaseQ16-HDRI|Win32
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16-HDRI|x86.Build.0 = ReleaseQ16-HDRI|Win32
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16-HDRI-OpenMP|arm64.ActiveCfg = ReleaseQ16-HDRI-OpenMP|ARM64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16-HDRI-OpenMP|arm64.Build.0 = ReleaseQ16-HDRI-OpenMP|ARM64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16-HDRI-OpenMP|x64.ActiveCfg = ReleaseQ16-HDRI-OpenMP|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16-HDRI-OpenMP|x64.Build.0 = ReleaseQ16-HDRI-OpenMP|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16-HDRI-OpenMP|x86.ActiveCfg = ReleaseQ16-HDRI-OpenMP|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16-OpenMP|arm64.ActiveCfg = ReleaseQ16-OpenMP|ARM64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16-OpenMP|arm64.Build.0 = ReleaseQ16-OpenMP|ARM64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16-OpenMP|x64.ActiveCfg = ReleaseQ16-OpenMP|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16-OpenMP|x64.Build.0 = ReleaseQ16-OpenMP|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ16-OpenMP|x86.ActiveCfg = ReleaseQ16-OpenMP|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ8|arm64.ActiveCfg = ReleaseQ8|ARM64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ8|arm64.Build.0 = ReleaseQ8|ARM64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ8|x64.ActiveCfg = ReleaseQ8|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ8|x64.Build.0 = ReleaseQ8|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ8|x86.ActiveCfg = ReleaseQ8|Win32
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ8|x86.Build.0 = ReleaseQ8|Win32
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ8-OpenMP|arm64.ActiveCfg = ReleaseQ8-OpenMP|ARM64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ8-OpenMP|arm64.Build.0 = ReleaseQ8-OpenMP|ARM64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ8-OpenMP|x64.ActiveCfg = ReleaseQ8-OpenMP|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ8-OpenMP|x64.Build.0 = ReleaseQ8-OpenMP|x64
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A}.ReleaseQ8-OpenMP|x86.ActiveCfg = ReleaseQ8-OpenMP|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{74E62AD0-D2F5-41F0-97A7-2D1E8BDE595A} = {AA38A23D-B639-4B56-BBCC-43446386FE8B}
+		{DBA3E7EC-F1B9-46E3-92D4-BB3001734A90} = {6C3DBF08-7B17-4B45-BA79-E3DB64032574}
+		{12B5113A-B68A-4DDF-8A74-A5D615AFF49A} = {6C3DBF08-7B17-4B45-BA79-E3DB64032574}
+		{C8420103-07D2-459E-9EFD-8FC57AA569E0} = {6C3DBF08-7B17-4B45-BA79-E3DB64032574}
+		{5B17570E-CC0B-40D4-A4FE-2FDCD1E55DED} = {6C3DBF08-7B17-4B45-BA79-E3DB64032574}
+		{8DAB5BB6-E6EF-46C2-9F45-D779E1D1AACC} = {6C3DBF08-7B17-4B45-BA79-E3DB64032574}
+		{BDFD18E8-BA42-420C-907E-9EC0C9E0A6B0} = {AA38A23D-B639-4B56-BBCC-43446386FE8B}
+		{8E1216C8-EAE4-4E2D-B717-BAB023683820} = {1520A3A2-D586-471F-9C70-80D43532A0C6}
+		{6931BC75-E765-4F1A-A961-6905E8308664} = {4D076C4F-5298-40AC-BE34-02EA77AF7F06}
+		{7821CD6E-88F1-42CE-81A0-D67F7767ECC8} = {4D076C4F-5298-40AC-BE34-02EA77AF7F06}
+		{F9F51AB1-7683-4E2D-B746-4360926ABDE9} = {6C3DBF08-7B17-4B45-BA79-E3DB64032574}
+		{950C68AA-029F-4213-BCC8-20CB145E15CA} = {6C3DBF08-7B17-4B45-BA79-E3DB64032574}
+		{3DF7FEA1-1839-4123-9B58-E8D86CC981C7} = {4B73C473-ECF3-4683-A81A-47E85061A7C6}
+		{C9FDCB6E-2B4E-4E3B-A0B3-336D575E0E87} = {6C3DBF08-7B17-4B45-BA79-E3DB64032574}
+		{BFCD9FE6-479F-4D5E-B4BA-046317AD8334} = {6C3DBF08-7B17-4B45-BA79-E3DB64032574}
+		{BE2DF871-363E-46ED-A999-81C5D6A232D7} = {AA38A23D-B639-4B56-BBCC-43446386FE8B}
+		{16F5433C-4F98-4CE9-A40E-C768FF818761} = {BE2DF871-363E-46ED-A999-81C5D6A232D7}
+		{F6BD95D6-AD2E-492F-99C6-95D17D966290} = {A1FC197D-F3DB-4735-BAFF-52D176C097E8}
+		{5F1BF474-B859-455E-8922-356BEDD90521} = {A1FC197D-F3DB-4735-BAFF-52D176C097E8}
+		{9990A9C0-C8EA-444B-8594-EF7888779B1D} = {A1FC197D-F3DB-4735-BAFF-52D176C097E8}
+		{C354B5EC-5E74-4929-8520-4205E296918B} = {A1FC197D-F3DB-4735-BAFF-52D176C097E8}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FA164FEE-1EC8-4842-A763-6E19BE5E3E51}
+	EndGlobalSection
+EndGlobal

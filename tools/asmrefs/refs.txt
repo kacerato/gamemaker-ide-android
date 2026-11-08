@@ -1,0 +1,173 @@
+DESK Accessibility	System.Windows.Forms.Design,System.Windows.Forms.Primitives,UIAutomationClientSideProviders
+core Microsoft.CSharp	GmpmBindings,IDE,ImageEditor,RoomEditor,System.Printing,Utils
+core Microsoft.VisualBasic	System.Printing
+core Microsoft.VisualBasic.Core	Microsoft.VisualBasic.Forms,System.Printing
+core Microsoft.Win32.Primitives	Microsoft.VisualBasic.Forms,Microsoft.VisualStudio.Threading,System.Diagnostics.EventLog,System.Diagnostics.PerformanceCounter,System.DirectoryServices,System.Drawing.Common (+7)
+core Microsoft.Win32.Registry	Build,Graphics,Microsoft.VisualBasic.Forms,Microsoft.VisualStudio.Threading,Microsoft.Win32.Registry.AccessControl,System.Diagnostics.EventLog (+5)
+core mscorlib	Microsoft.VisualStudio.Imaging.Interop.14.0.DesignTime,System.Printing
+core netstandard	Clipper2Lib,MediatR,Microsoft.Bcl.AsyncInterfaces,Microsoft.Extensions.Configuration,Microsoft.Extensions.Configuration.Abstractions,Microsoft.Extensions.Configuration.Binder (+6)
+DESK PresentationCore	System.Printing,System.Windows.Controls.Ribbon,WindowsFormsIntegration
+DESK PresentationFramework	System.Printing,System.Windows.Controls.Ribbon,WindowsFormsIntegration
+DESK ReachFramework	System.Printing
+core System	System.Printing
+core System.AppContext	System.Printing
+core System.Buffers	System.Printing
+core System.Collections	Alice,AnimCurveEditor,AssetBrowser,Audio,AudioTextureGroups,BookmarkPlugins (+138)
+core System.Collections.Concurrent	Alice,Audio,BouncyCastle.Cryptography,CodeDiagnostics,CodeEditor2,CoreResources (+33)
+core System.Collections.Immutable	AudioTextureGroups,CodeEditor2,CoreResources,ExtensionsEditor,Feather.Logic,GameMakerLanguageServer (+12)
+core System.Collections.NonGeneric	Microsoft.VisualBasic.Forms,MQTTnet,System.CodeDom,System.Configuration.ConfigurationManager,System.Diagnostics.PerformanceCounter,System.DirectoryServices (+8)
+core System.Collections.Specialized	Build,IDE,Microsoft.VisualBasic.Forms,System.CodeDom,System.Configuration.ConfigurationManager,System.Diagnostics.EventLog (+7)
+core System.ComponentModel	GameMakerLanguageServer,Graphics,IDE,Microsoft.Extensions.DependencyInjection,Microsoft.Extensions.DependencyInjection.Abstractions,Microsoft.VisualBasic.Forms (+13)
+core System.ComponentModel.Annotations	System.Printing
+core System.ComponentModel.DataAnnotations	System.Printing
+core System.ComponentModel.EventBasedAsync	Microsoft.VisualBasic.Forms,Microsoft.Win32.SystemEvents,StartScreen,System.Printing,System.Windows.Extensions
+core System.ComponentModel.Primitives	Audio,Build,CoreResources,Feather.Logic,FileIO,IDE (+22)
+core System.ComponentModel.TypeConverter	CoreResources,IDE,IncludedFilesEditor,Microsoft.VisualBasic.Forms,Newtonsoft.Json,System.CodeDom (+13)
+core System.Configuration	System.Printing
+core System.Console	Alice,AssetBrowser,BouncyCastle.Cryptography,Build,CodeEditor2,CorePlugins (+27)
+core System.Core	System.Printing
+core System.Data	System.Printing
+core System.Data.Common	Newtonsoft.Json,System.Printing,System.Security.Permissions
+core System.Data.DataSetExtensions	System.Printing
+core System.Diagnostics.Contracts	System.Printing
+core System.Diagnostics.Debug	System.Printing
+core System.Diagnostics.DiagnosticSource	Microsoft.Extensions.Logging,Microsoft.IdentityModel.Tokens,System.Printing
+core System.Diagnostics.FileVersionInfo	System.Printing
+core System.Diagnostics.Process	Audio,Build,CodeEditor2,ExtensionsEditor,ExternalEditors,GameMaker-LTS2026 (+12)
+core System.Diagnostics.StackTrace	Microsoft.IdentityModel.Tokens,Microsoft.VisualStudio.Threading,OmniSharp.Extensions.JsonRpc,System.Printing
+core System.Diagnostics.TextWriterTraceListener	System.Configuration.ConfigurationManager,System.Printing
+core System.Diagnostics.Tools	System.Printing
+core System.Diagnostics.TraceSource	CoreResources,Graphics,IconCache,IDE,Microsoft.VisualBasic.Forms,Newtonsoft.Json (+11)
+core System.Diagnostics.Tracing	GameMakerLanguageServer,Microsoft.Extensions.DependencyInjection,Microsoft.IdentityModel.Logging,Microsoft.VisualStudio.Threading,System.Printing
+core System.Drawing	System.Printing
+core System.Drawing.Primitives	Microsoft.VisualBasic.Forms,QRCoder,System.Drawing.Common,System.Printing,System.Windows.Forms.Design,System.Windows.Forms.Primitives (+1)
+core System.Dynamic.Runtime	System.Printing
+core System.Formats.Asn1	IDE,System.Printing,System.Security.Cryptography.Pkcs
+core System.Formats.Tar	System.Printing
+core System.Globalization	System.Printing
+core System.Globalization.Calendars	System.Printing
+core System.Globalization.Extensions	System.Printing
+core System.IO	System.Printing
+core System.IO.Compression	BouncyCastle.Cryptography,IDE,Microsoft.IdentityModel.Tokens,QRCoder,SharpCompress,System.IO.Packaging (+2)
+core System.IO.Compression.Brotli	System.Printing
+core System.IO.Compression.FileSystem	System.Printing
+core System.IO.Compression.ZipFile	System.Printing,Utils
+core System.IO.FileSystem	System.Printing
+core System.IO.FileSystem.AccessControl	System.DirectoryServices,System.Printing,Utils
+core System.IO.FileSystem.DriveInfo	Build,IDE,Microsoft.VisualBasic.Forms,System.Printing
+core System.IO.FileSystem.Primitives	System.Printing
+core System.IO.FileSystem.Watcher	FileIO,IncludedFilesEditor,System.Printing,Utils
+core System.IO.IsolatedStorage	System.Printing
+core System.IO.MemoryMappedFiles	IDE,System.Diagnostics.PerformanceCounter,System.Printing
+core System.IO.Pipes	Microsoft.VisualBasic.Forms,System.Printing
+core System.IO.Pipes.AccessControl	System.Printing
+core System.IO.UnmanagedMemoryStream	System.Printing
+core System.Linq	Alice,AnimCurveEditor,AssetBrowser,Audio,AudioTextureGroups,BreakpointPlugins (+93)
+core System.Linq.Expressions	CoreResources,Feather.Logic,GmpmBindings,IDE,ImageEditor,Microsoft.Extensions.DependencyInjection (+7)
+core System.Linq.Parallel	System.Printing
+core System.Linq.Queryable	System.Printing,System.Reactive
+core System.Memory	BouncyCastle.Cryptography,CoreResources,Feather.Logic,Feather.Ui,GameMakerLanguageServer,GMSCJsonLibrary (+35)
+core System.Net	System.Printing
+core System.Net.Http	BugReporter,Build,IDE,Microsoft.IdentityModel.Logging,PackageManager,System.Printing (+1)
+core System.Net.Http.Json	System.Printing
+core System.Net.HttpListener	Build,IDE,System.Printing
+core System.Net.Mail	CoreResources,GMSCJsonLibrary,System.Printing
+core System.Net.NameResolution	Debugger,System.DirectoryServices,System.Printing,Utils
+core System.Net.NetworkInformation	Microsoft.VisualBasic.Forms,System.Printing,Utils
+core System.Net.Ping	Microsoft.VisualBasic.Forms,System.Printing
+core System.Net.Primitives	BouncyCastle.Cryptography,Build,Debugger,GMSProxy,IDE,Microsoft.VisualBasic.Forms (+10)
+core System.Net.Quic	System.Printing
+core System.Net.Requests	BugReporter,Build,GMSProxy,IDE,Microsoft.VisualBasic.Forms,System.Printing (+4)
+core System.Net.Security	MQTTnet,MQTTnet.Server,System.DirectoryServices,System.Printing
+core System.Net.ServicePoint	GameMaker-LTS2026,System.Printing,TusClient
+core System.Net.Sockets	Debugger,IDE,MQTTnet,MQTTnet.Server,System.Printing,Utils
+core System.Net.WebClient	Microsoft.VisualBasic.Forms,StartScreen,System.Configuration.ConfigurationManager,System.Printing,Utils
+core System.Net.WebHeaderCollection	Build,IDE,System.Printing,TusClient,Utils
+core System.Net.WebProxy	MQTTnet,System.Printing
+core System.Net.WebSockets	Debugger,MQTTnet,System.Printing
+core System.Net.WebSockets.Client	Debugger,MQTTnet,System.Printing
+core System.Numerics	System.Printing
+core System.Numerics.Vectors	BouncyCastle.Cryptography,System.Drawing.Common,System.Printing
+core System.ObjectModel	Alice,CommonPluginFunctionality,CoreResources,GMLVisual,IDE,Newtonsoft.Json (+11)
+core System.Private.CoreLib	IDE
+core System.Reflection	System.Printing
+core System.Reflection.DispatchProxy	System.Printing
+core System.Reflection.Emit	System.Printing
+core System.Reflection.Emit.ILGeneration	Microsoft.Extensions.DependencyInjection,Newtonsoft.Json,OmniSharp.Extensions.JsonRpc,System.Printing,Utils
+core System.Reflection.Emit.Lightweight	Microsoft.Extensions.DependencyInjection,Newtonsoft.Json,OmniSharp.Extensions.JsonRpc,System.Printing,Utils
+core System.Reflection.Extensions	System.Printing
+core System.Reflection.Metadata	System.Printing
+core System.Reflection.Primitives	Microsoft.Extensions.DependencyInjection,Newtonsoft.Json,OmniSharp.Extensions.JsonRpc,System.Printing,Utils
+core System.Reflection.TypeExtensions	System.Printing
+core System.Resources.Reader	System.Printing
+core System.Resources.ResourceManager	System.Printing
+core System.Resources.Writer	System.Printing,System.Resources.Extensions,System.Windows.Forms.Design
+core System.Runtime	Alice,AnimCurveEditor,AssetBrowser,Audio,AudioTextureGroups,BookmarkPlugins (+160)
+core System.Runtime.CompilerServices.Unsafe	BouncyCastle.Cryptography,Microsoft.Extensions.Primitives,Microsoft.VisualStudio.Threading,Nerdbank.Streams,System.Printing
+core System.Runtime.CompilerServices.VisualC	System.Printing
+core System.Runtime.Extensions	System.Printing
+core System.Runtime.Handles	System.Printing
+core System.Runtime.InteropServices	Audio,Build,CodeEditor2,CoreResources,Debugger,GameMaker-LTS2026 (+59)
+core System.Runtime.InteropServices.JavaScript	System.Printing
+core System.Runtime.InteropServices.RuntimeInformation	Microsoft.VisualStudio.Threading,OmniSharp.Extensions.LanguageProtocol,System.Printing
+core System.Runtime.Intrinsics	BouncyCastle.Cryptography,Microsoft.Bcl.Memory,SharpCompress,System.Printing,ZstdSharp
+core System.Runtime.Loader	CorePlugins,Microsoft.Extensions.DependencyInjection.Abstractions,System.Printing
+core System.Runtime.Numerics	Newtonsoft.Json,Semver,System.Printing,System.Security.Cryptography.Pkcs,System.Security.Cryptography.Xml
+core System.Runtime.Serialization	System.Printing
+core System.Runtime.Serialization.Formatters	Newtonsoft.Json,System.Configuration.ConfigurationManager,System.Printing,System.Resources.Extensions,System.Windows.Forms.Design
+core System.Runtime.Serialization.Json	Build,Debugger,GMLVisual,IDE,System.Printing,Utils
+core System.Runtime.Serialization.Primitives	AnimCurveEditor,AssetBrowser,BreakpointPlugins,Build,CoreResources,Debugger (+13)
+core System.Runtime.Serialization.Xml	Build,Debugger,GMLVisual,IDE,Microsoft.VisualBasic.Forms,System.Printing (+1)
+core System.Security	System.Printing
+core System.Security.AccessControl	Microsoft.Win32.Registry.AccessControl,System.DirectoryServices,System.Printing,System.Security.Cryptography.Xml,System.Security.Permissions,System.Threading.AccessControl (+1)
+core System.Security.Claims	Microsoft.IdentityModel.Tokens,System.DirectoryServices,System.Printing
+core System.Security.Cryptography	Build,CodeEditor2,CorePlugins,IDE,LocalPackage,Microsoft.IdentityModel.Tokens (+12)
+core System.Security.Cryptography.Algorithms	BouncyCastle.Cryptography,System.Printing
+core System.Security.Cryptography.Cng	System.Printing
+core System.Security.Cryptography.Csp	BouncyCastle.Cryptography,System.Printing
+core System.Security.Cryptography.Encoding	BouncyCastle.Cryptography,System.Printing
+core System.Security.Cryptography.OpenSsl	System.Printing
+core System.Security.Cryptography.Primitives	BouncyCastle.Cryptography,System.Printing
+core System.Security.Cryptography.X509Certificates	BouncyCastle.Cryptography,System.Printing
+core System.Security.Principal	System.Printing
+core System.Security.Principal.Windows	Microsoft.VisualBasic.Forms,System.Diagnostics.EventLog,System.Diagnostics.PerformanceCounter,System.DirectoryServices,System.Printing,System.Threading.AccessControl (+1)
+core System.Security.SecureString	System.Printing
+core System.ServiceModel.Web	System.Printing
+core System.ServiceProcess	System.Printing
+core System.Text.Encoding	System.Printing
+core System.Text.Encoding.CodePages	GameMaker-LTS2026,QRCoder,SharpCompress,System.Printing
+core System.Text.Encoding.Extensions	Magick.NET.Core,Newtonsoft.Json,SharpFont,System.Configuration.ConfigurationManager,System.Printing
+core System.Text.Encodings.Web	Microsoft.IdentityModel.Tokens,System.Printing
+core System.Text.Json	CorePlugins,GMLVisualLibLoader,GuiPluginLoader,HotkeyPluginLoader,IDE,LanguagePluginLoader (+5)
+core System.Text.RegularExpressions	Build,CodeEditor2,CoreResources,Debugger,Feather.Logic,GMSCJsonLibrary (+16)
+core System.Threading	Alice,Audio,BouncyCastle.Cryptography,BreakpointPlugins,Build,CodeDiagnostics (+82)
+core System.Threading.Channels	OmniSharp.Extensions.JsonRpc,System.Printing
+core System.Threading.Overlapped	System.Printing
+core System.Threading.Tasks	System.Printing
+core System.Threading.Tasks.Dataflow	System.Printing
+core System.Threading.Tasks.Extensions	System.Printing
+core System.Threading.Tasks.Parallel	CoreResources,IDE,ImageEditor,ShapePlugin,System.Printing
+core System.Threading.Thread	BugReporter,Build,CodeEditor2,Debugger,Feather.Ui,GameMaker-LTS2026 (+25)
+core System.Threading.ThreadPool	Microsoft.Extensions.DependencyInjection,Microsoft.VisualStudio.Threading,System.Diagnostics.EventLog,System.IO.Pipelines,System.Management,System.Printing (+2)
+core System.Threading.Timer	System.Printing
+core System.Transactions	System.Printing
+core System.Transactions.Local	System.Printing
+core System.ValueTuple	System.Printing
+core System.Web	System.Printing
+core System.Web.HttpUtility	IDE,System.Printing
+core System.Windows	System.Printing
+DESK System.Windows.Forms	Microsoft.VisualBasic.Forms,System.Windows.Forms.Design,WindowsAdapters,WindowsFormsIntegration
+DESK System.Xaml	System.Printing,System.Windows.Controls.Ribbon,WindowsFormsIntegration
+core System.Xml	System.Printing
+core System.Xml.Linq	System.Printing
+core System.Xml.ReaderWriter	Alice,AnimCurveEditor,AssetBrowser,AudioTextureGroups,BreakpointPlugins,BugReporter (+50)
+core System.Xml.Serialization	System.Printing
+core System.Xml.XDocument	ExtensionsEditor,Magick.NET.Core,Microsoft.VisualStudio.Threading,Newtonsoft.Json,OmniSharp.Extensions.LanguageServer,QRCoder (+1)
+core System.Xml.XmlDocument	System.Printing
+core System.Xml.XmlSerializer	Feather.Logic,System.Configuration.ConfigurationManager,System.Printing
+core System.Xml.XPath	System.Printing,System.Security.Cryptography.Xml
+core System.Xml.XPath.XDocument	System.Printing
+DESK UIAutomationClient	UIAutomationClientSideProviders
+DESK UIAutomationProvider	System.Windows.Controls.Ribbon,UIAutomationClientSideProviders,WindowsFormsIntegration
+DESK UIAutomationTypes	System.Windows.Controls.Ribbon,UIAutomationClientSideProviders,WindowsFormsIntegration
+core WindowsBase	Microsoft.VisualStudio.Threading,System.Printing,System.Windows.Controls.Ribbon,System.Windows.Presentation,UIAutomationClientSideProviders,WindowsFormsIntegration

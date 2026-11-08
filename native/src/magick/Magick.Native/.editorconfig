@@ -1,0 +1,22 @@
+root = true
+
+[*.{c,cmd,h,md,nuspec,ps1,sh,txt,yml}]
+
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[Dockerfile]
+
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{c,h,nuspec,sh,yml}]
+
+indent_size = 2
+tab_width = 2
+
+[*.{ps1,txt}]
+
+indent_size = 4
+tab_width = 4

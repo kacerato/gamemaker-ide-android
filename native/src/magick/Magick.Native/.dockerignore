@@ -1,0 +1,13 @@
+src/ImageMagick/imagemagick-windows
+src/ImageMagick/artifacts
+src/Magick.Native/.vs
+src/Magick.Native/bin
+src/Magick.Native/lib
+src/wasm-file-creator/lib
+src/wasm-file-creator/node_modules
+build/**/artifacts
+publish
+tools
+.git
+.vs
+.vscode

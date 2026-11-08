@@ -1,0 +1,10 @@
+*.sh text eol=lf
+*.so binary
+*.jar binary
+*.aar binary
+*.apk binary
+*.zip binary
+*.xz binary
+*.gz binary
+*.png binary
+*.mp4 binary

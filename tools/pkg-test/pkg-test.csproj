@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Testa no PC a extracao do gmide-package.zip com o MESMO codigo do app
+       (host/PackageImport.cs; a parte Android fica fora por #if ANDROID).
+       Uso: dotnet run -c Release (args: zip e pasta de saida) -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\host\PackageImport.cs" Link="PackageImport.cs" />
+  </ItemGroup>
+</Project>

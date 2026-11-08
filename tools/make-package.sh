@@ -29,7 +29,6 @@ DIST="${DIST:-$HERE/dist}"
 
 [ -f "$GM_DIR/IDE.dll" ] || { echo "IDE nao encontrada em $GM_DIR"; exit 1; }
 [ -f "$RT_DIR/receipt.json" ] || { echo "Runtime nao encontrado em $RT_DIR"; exit 1; }
-[ -f "$APK" ] || { echo "APK nao encontrado: $APK (compile o host em Release)"; exit 1; }
 [ -d "$PREFABS_DIR" ] || { echo "Aviso: $PREFABS_DIR nao existe; pacote sem Prefabs"; PREFABS_DIR=""; }
 
 mkdir -p "$DIST"
@@ -120,28 +119,27 @@ echo "== gerando $DIST/gmide-package.zip (alguns minutos)"
   -ToolsManifest "$(w "$WORK/gmide-tools-integrity.json")" \
   -Out "$(w "$DIST/gmide-package.zip")"
 
-cp "$APK" "$DIST/$PKG-Signed.apk"
+if [ -f "$APK" ]; then
+  cp "$APK" "$DIST/$PKG-Signed.apk"
+else
+  echo "Pacote base pronto. Agora compile o host em Release para embuti-lo no APK."
+fi
 
 cat > "$DIST/LEIA-ME.txt" <<'TXT'
-GameMaker IDE para Android - instalacao sem adb
+GM IDE Android - APK completo
 ================================================
 
-1. Copie os DOIS arquivos desta pasta para a pasta "Download" do celular
-   (cabo USB, nuvem, etc.):
-     - gmide-package.zip   (IDE + runtime, ~800 MB descompactados)
-     - io.gmide.android-Signed.apk
-   O zip precisa ficar exatamente em Download/gmide-package.zip.
-   Se ficar em outro lugar, o app abre o seletor de arquivos para voce escolher.
+1. Baixe ou copie somente o APK completo para o celular.
+   A IDE e o runtime ja vem dentro dele; nao precisa baixar um ZIP separado.
 
 2. No celular, toque no APK para instalar (permita "instalar apps
    desconhecidos" para o app de arquivos, se o Android pedir).
 
 3. Abra o app "GM IDE Android". Na primeira vez:
-     - conceda "Acesso a todos os arquivos" quando a tela do sistema abrir
-       e volte ao app;
-     - aguarde a extracao (1 a 3 minutos; o progresso aparece em avisos
-       na parte de baixo da tela). Precisa de ~1 GB livre.
-   Depois disso o zip pode ser apagado do celular.
+     - aguarde a instalacao automatica da IDE/runtime (1 a 3 minutos;
+       o progresso aparece na tela). Nao precisa de internet;
+     - reserve cerca de 1 GB livre alem do APK instalado;
+     - conceda acesso aos arquivos quando for abrir ou salvar projetos.
 
 Para atualizar a IDE: instale por cima com a mesma assinatura e preserve os dados.
 Nao desinstale nem limpe os dados para uma atualizacao normal.

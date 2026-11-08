@@ -8,8 +8,8 @@ namespace GmIde;
 
 // Equivalente ao YoYoStudio.Program.Main do lancador original, sem as partes
 // exclusivas de Windows/macOS (relaunch, minidump, TestInstall, menus Cocoa).
-// Os assemblies da IDE NAO vao no APK: sao lidos da pasta "ide" no
-// armazenamento do app (copiada da instalacao Windows com adb push).
+// Os assemblies da IDE sao extraidos do pacote embutido no primeiro boot e
+// carregados da pasta "ide" no armazenamento do app.
 public static class Launcher
 {
     const string Tag = "GmIde";
@@ -73,9 +73,12 @@ public static class Launcher
         // se ainda nao houver, tenta de novo depois do importador.
         LogMirror.Start();
 
-        // Instalacao sem adb: Download/gmide-package.zip ou seletor do sistema (PackageImport.cs).
+        // Primeira abertura: instala do proprio APK, sem download ou ZIP manual.
         if (!File.Exists(Path.Combine(_ideDir, "IDE.dll")))
-            PackageImport.TryInstall(_ideDir);
+        {
+            if (!PackageImport.TryInstall(_ideDir) && PackageImport.HasBundledPackage)
+                return 2; // Erro ja exibido; nao pede uma pasta do adb no APK completo.
+        }
         LogMirror.Start();
 
         // Fluxo com adb (deploy.sh): pasta de passagem Download/gmide-ide.

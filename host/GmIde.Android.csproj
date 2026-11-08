@@ -10,11 +10,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationId>io.gmide.android</ApplicationId>
-    <ApplicationVersion>2</ApplicationVersion>
-    <ApplicationDisplayVersion>0.2.0</ApplicationDisplayVersion>
+    <ApplicationVersion>3</ApplicationVersion>
+    <ApplicationDisplayVersion>0.2.1</ApplicationDisplayVersion>
     <RuntimeIdentifier>android-arm64</RuntimeIdentifier>
     <EnableDefaultAndroidItems>false</EnableDefaultAndroidItems>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <!-- OpenFd precisa de um asset armazenado sem compressao externa ao ZIP. -->
+    <AndroidStoreUncompressedFileExtensions>$(AndroidStoreUncompressedFileExtensions);.zip</AndroidStoreUncompressedFileExtensions>
+    <GmPackage Condition="'$(GmPackage)' == ''">$(MSBuildThisFileDirectory)..\dist\gmide-package.zip</GmPackage>
     <AndroidManifest>AndroidManifest.xml</AndroidManifest>
     <!-- A IDE usa reflexao pesada e carrega plugins dinamicamente. -->
     <AndroidLinkMode>SdkOnly</AndroidLinkMode>
@@ -33,6 +36,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <AndroidAsset Include="$(GmPackage)" Link="Assets\bootstrap\gmide-package.zip" />
     <Reference Include="IDE"><HintPath>$(GmInstall)\IDE.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="OSCore"><HintPath>$(GmInstall)\OSCore.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Utils"><HintPath>$(GmInstall)\Utils.dll</HintPath><Private>false</Private></Reference>
@@ -75,4 +79,7 @@
     <TrimmerRootDescriptor Include="ILLink.Descriptors.xml" />
   </ItemGroup>
   <Import Project="framework-roots.props" />
+  <Target Name="RequireBundledIdePackage" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(GmPackage)')" Text="Pacote da IDE ausente: $(GmPackage). Gere-o com tools/make-package.sh ou informe -p:GmPackage=caminho\gmide-package.zip." />
+  </Target>
 </Project>

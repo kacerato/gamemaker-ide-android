@@ -6,14 +6,14 @@ teclado, compilação local Android VM, preview e exportação de APK.
 ## Instalar ou atualizar
 
 Baixe o APK Release em [Releases](https://github.com/kacerato/gamemaker-ide-android/releases/latest).
-A versão 0.2.0 aparece no launcher como **GM IDE Android**.
+A versão 0.2.1 aparece no launcher como **GM IDE Android**.
 Para atualizar uma instalação com a mesma assinatura, instale por cima e preserve
 os dados. Não desinstale o aplicativo para uma atualização normal.
 
-A primeira instalação também precisa do pacote de IDE/runtime
-`gmide-package.zip`, preparado com uma instalação local do GameMaker LTS 2026.
-Coloque-o em Downloads ou escolha-o quando o aplicativo solicitar. Acesso a todos
-os arquivos e cerca de 1 GB livre são necessários para importar o conteúdo.
+A IDE e o runtime já vêm dentro do **APK completo**. Na primeira abertura, o app
+instala esse conteúdo automaticamente, sem internet e sem escolher um ZIP.
+Reserve cerca de 1 GB livre além do APK instalado. O APK fica em torno de 500 MB.
+O acesso aos arquivos pode ser solicitado ao abrir ou salvar projetos.
 Esse port não substitui a licença e os termos do GameMaker.
 
 ## Conteúdo
@@ -36,9 +36,15 @@ JDK 21, NDK 27.1 e GameMaker LTS 2026 instalado. Os caminhos configuráveis est�
 em `host/GmIde.Android.csproj` e nos scripts nativos.
 
 ```sh
+# Gera a dependência a partir da instalação local da IDE/runtime:
+bash tools/make-package.sh
 bash host/build-java.sh
 dotnet build host/GmIde.Android.csproj -c Release -p:AndroidDebuggable=false
 ```
+
+O build embute `dist/gmide-package.zip` como asset sem compressão externa e falha
+se esse arquivo estiver ausente. Para outro local, informe `-p:GmPackage=CAMINHO`.
+Esse ZIP é uma entrada do build; o usuário final baixa apenas o APK.
 
 `Release` define a configuração de compilação; a chave de assinatura é uma
 configuração independente. Para atualizar instalações anteriores, preserve o

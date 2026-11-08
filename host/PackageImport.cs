@@ -29,8 +29,9 @@ namespace GmIde;
 // runtime.json (e nao precisa da pasta de passagem do adb).
 //
 // Fluxo (PackageImport.TryInstall, chamado pelo Launcher antes do ImportIde do adb):
-//  1. pede "Todos os arquivos" de forma guiada (Saf.EnsureAllFilesAccess);
-//  2. procura /storage/emulated/0/Download/gmide-package.zip; se nao achar (ou nao conseguir
+//  1. abre bootstrap/gmide-package.zip do proprio APK, sem permissao ou copia;
+//  2. apenas em pacotes legados sem asset, pede "Todos os arquivos" e procura
+//     /storage/emulated/0/Download/gmide-package.zip; se nao achar (ou nao conseguir
 //     ler), abre o seletor do sistema (ACTION_OPEN_DOCUMENT, zip);
 //  3. extrai direto para as pastas finais, cada uma via "<pasta>.importando" + rename
 //     (atomico: uma extracao interrompida nao deixa IDE.dll no destino e e refeita no
@@ -47,6 +48,70 @@ public sealed class PackageInfo
     public string? IdeVersion, RuntimeVersion, RuntimeFolder;
     public long TotalBytes;
     public Dictionary<string, (string Sha256, long Size)> Files = new(StringComparer.Ordinal);
+}
+
+// AssetFileDescriptor aponta para um intervalo dentro do APK. ZipArchive precisa
+// de offsets relativos a esse intervalo, inclusive Seek(End), sem enxergar o resto
+// do APK nem copiar o pacote inteiro para a memoria/cache.
+public sealed class PackageAssetStream : Stream
+{
+    readonly Stream source;
+    readonly long start, length;
+    long position;
+    bool disposed;
+
+    // Apos construcao bem-sucedida, este stream possui source.
+    public PackageAssetStream(Stream source, long start, long length)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        if (!source.CanRead || !source.CanSeek)
+            throw new ArgumentException("O pacote embutido exige arquivo legivel com seek.", nameof(source));
+        if (start < 0 || length < 0 || start > source.Length || length > source.Length - start)
+            throw new InvalidDataException("Intervalo do pacote fora do APK.");
+        this.source = source;
+        this.start = start;
+        this.length = length;
+        source.Position = start;
+    }
+
+    public override bool CanRead => !disposed;
+    public override bool CanSeek => !disposed;
+    public override bool CanWrite => false;
+    public override long Length { get { ObjectDisposedException.ThrowIf(disposed, this); return length; } }
+    public override long Position { get => Seek(0, SeekOrigin.Current); set => Seek(value, SeekOrigin.Begin); }
+    public override long Seek(long offset, SeekOrigin origin)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        long next = origin switch
+        {
+            SeekOrigin.Begin => offset,
+            SeekOrigin.Current => checked(position + offset),
+            SeekOrigin.End => checked(length + offset),
+            _ => throw new ArgumentOutOfRangeException(nameof(origin)),
+        };
+        if (next < 0 || next > length) throw new IOException("Seek fora do pacote embutido.");
+        source.Position = start + next;
+        return position = next;
+    }
+    public override int Read(byte[] buffer, int offset, int count) => Read(buffer.AsSpan(offset, count));
+    public override int Read(Span<byte> buffer)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+        int count = (int)Math.Min(buffer.Length, length - position);
+        if (count == 0) return 0;
+        int read = source.Read(buffer[..count]);
+        if (read == 0) throw new EndOfStreamException("Pacote embutido truncado.");
+        position += read;
+        return read;
+    }
+    public override void Flush() { }
+    public override void SetLength(long value) => throw new NotSupportedException();
+    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing && !disposed) { disposed = true; source.Dispose(); }
+        base.Dispose(disposing);
+    }
 }
 
 public sealed class PackageExtractor
@@ -240,11 +305,14 @@ public static class PackageImport
 {
     const string Tag = "GmIde.Pkg";
     public const string FileName = "gmide-package.zip";
+    public const string BundledAsset = "bootstrap/" + FileName;
+    public static bool HasBundledPackage =>
+        (MainApplication.Instance.Assets!.List("bootstrap") ?? Array.Empty<string>()).Contains(FileName);
     public const string DefaultPath = "/storage/emulated/0/Download/" + FileName;
     const string AdbStagingIde = "/storage/emulated/0/Download/gmide-ide/IDE.dll";
     // Mesmo valor de RuntimeImport.ProgramDirName (${program_dir_name}).
     const string ProgramDirName = "GameMakerStudio2-LTS2026";
-    const string Title = "GameMaker IDE";
+    const string Title = "GM IDE Android";
 
     /// ${system_directory} antes do MacroExpansion (ver comentario no topo).
     public static string SystemDirectory =>
@@ -257,9 +325,12 @@ public static class PackageImport
     {
         if (File.Exists(Path.Combine(ideDir, "IDE.dll"))) return true;
         string? cacheCopy = null;
+        bool bundled = false;
         try
         {
-            if (!Saf.HasAllFilesAccess && OperatingSystem.IsAndroidVersionAtLeast(30))
+            bundled = HasBundledPackage;
+            Stream? src = bundled ? OpenBundled() : null;
+            if (!bundled && !Saf.HasAllFilesAccess && OperatingSystem.IsAndroidVersionAtLeast(30))
             {
                 MessageBox(Info, "Primeira execucao: o app vai instalar a IDE a partir de\n" +
                                  "Download/" + FileName + ".\n\n" +
@@ -268,7 +339,7 @@ public static class PackageImport
                 Saf.EnsureAllFilesAccess();
             }
 
-            Stream? src = OpenDefault();
+            src ??= OpenDefault();
             if (src == null)
             {
                 if (File.Exists(AdbStagingIde))
@@ -324,20 +395,41 @@ public static class PackageImport
                 ex.Extract(src);
             }
             ShowToast("IDE instalada. Iniciando...", false);
-            Log.Info(Tag, "Pacote instalado; o zip pode ser apagado: " + DefaultPath);
+            Log.Info(Tag, bundled ? "IDE/runtime instalados do APK; nenhum ZIP externo necessario."
+                                  : "Pacote instalado; o zip pode ser apagado: " + DefaultPath);
             return true;
         }
         catch (Exception e)
         {
             Log.Error(Tag, "Instalacao pelo pacote falhou: " + e);
             MessageBox(Error, "Falha ao instalar a IDE pelo pacote:\n" + e.Message +
-                              "\n\nCopie o gmide-package.zip de novo e reabra o app.");
+                              (bundled ? "\n\nLibere espaco se necessario e reabra o app para tentar novamente. " +
+                                         "Se a falha persistir, reinstale o APK por cima, sem apagar os dados."
+                                       : "\n\nCopie o gmide-package.zip de novo e reabra o app."));
             return false;
         }
         finally
         {
             if (cacheCopy != null) try { File.Delete(cacheCopy); } catch { }
         }
+    }
+
+    static Stream OpenBundled()
+    {
+        var assets = MainApplication.Instance.Assets!;
+        // Asset ausente permite o fluxo legado. Asset presente mas invalido deve
+        // produzir erro explicito, sem mandar o usuario procurar um ZIP externo.
+        using var asset = assets.OpenFd(BundledAsset);
+        using var duplicate = asset.ParcelFileDescriptor!.Dup()
+            ?? throw new IOException("Nao foi possivel abrir o descritor do pacote embutido.");
+        var file = new FileStream(new SafeFileHandle((IntPtr)duplicate.DetachFd(), true), FileAccess.Read, 1 << 16);
+        try
+        {
+            var stream = new PackageAssetStream(file, asset.StartOffset, asset.Length);
+            Log.Info(Tag, $"Pacote embutido no APK: {asset.Length / 1048576} MB; leitura direta sem copia.");
+            return stream;
+        }
+        catch { file.Dispose(); throw; }
     }
 
     static Stream? OpenDefault()

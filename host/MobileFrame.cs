@@ -9,7 +9,8 @@ namespace GmIde;
 //  1. TouchInput.OnIdeFrame: conta quadros e libera o "solta" de toque segurado (paleta de tiles etc.);
 //  2. sondagem do que esta sob o dedo (rolavel? qual ScrollBar?);
 //  3. rolagem direta / inercia;
-//  4. politica de janelas (editores ocupando a area, dialogos dentro da tela).
+//  4. politica de janelas (editores ocupando a area, dialogos dentro da tela);
+//  5. casca mobile-first (MobileShell: moldura nativa, docks como gavetas, menu ⋮).
 static class MobileFrame
 {
     const string Tag = "GmIde.Frame";
@@ -40,5 +41,6 @@ static class MobileFrame
         MobileScrollTarget.Apply();
         MobileWindowPolicy.OnFrame();
         try { KeyboardMode.OnProcessFrame(); } catch (Exception e) { Log.Warn(Tag, "Teclado: " + e.Message); }
+        MobileShell.OnFrame();
     }
 }

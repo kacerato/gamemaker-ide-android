@@ -672,6 +672,8 @@ public final class ShortcutBar {
         m.add(2, 300, 60, "Botao de atalhos: posicao padrao");
         m.add(3, 400, 70, "Exportar jogo (APK, Web, Windows)...");
         m.add(4, 500, 80, TelemetryConsent.menuLabel(sActivity));
+        final boolean shellOn = prefs().getBoolean("mobile_shell", false);   // padrao: desktop
+        if (!sPreview) m.add(5, 600, 90, shellOn ? "Interface clássica (desktop)" : "Interface para celular");
         pm.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             public boolean onMenuItemClick(MenuItem item) {
                 int id = item.getItemId();
@@ -681,6 +683,10 @@ public final class ShortcutBar {
                     changeScale(id == 200 ? 5 : -5);
                 } else if (id == 202) {
                     setScale(0);
+                } else if (id == 600) {
+                    // Casca mobile (MobileShell.cs grava a preferencia mobile_shell e aplica ao vivo).
+                    closePanel("shell");
+                    sendCommand("shell:mode:" + (shellOn ? "0" : "1"));
                 } else if (id == 500) {
                     TelemetryConsent.toggle(sActivity);
                 } else if (id == 400) {
@@ -900,6 +906,12 @@ public final class ShortcutBar {
         h.postDelayed(new Runnable() {
             public void run() { sendCommand(cmd); }
         }, 400);
+    }
+
+    /** Comando imediato para o C# (casca mobile, MobileShell). Thread de UI. */
+    public static void command(String cmd) {
+        if (Looper.myLooper() == Looper.getMainLooper()) sendCommand(cmd);
+        else postCommand(cmd);
     }
 
     /** Chamado pelo C# (TouchInput) ao ver SDL_SCANCODE_HELP. null = fila vazia. Qualquer thread. */

@@ -12,11 +12,50 @@ Camada do port que adapta a IDE de desktop a uma tela de celular em paisagem, se
 | `MobileWindowPolicy.cs` | Editores em 100% com a vista seguindo o foco; diálogos na desktop e dentro da tela | IDE |
 | `MobileWindows.cs` | Fachada para os ganchos de IL (sem tipos da IDE nas assinaturas) e modo Mover | IDE |
 | `MobileUiPatches.cs` | Patches de IL do IDE.dll para a camada | boot |
+| `MobileShell.cs` | Casca mobile-first: esconde a moldura de desktop, docks como gavetas, estado e menu para o Java | IDE |
+| `MobileShell.java`, `ShellIcon.java` | Barra superior, trilho de painéis, folhas do menu ⋮ e de editores | UI |
 | `KeyboardMode.cs` | Modo de edição de código com teclado | IDE |
 | `IdeSetup.cs` | Foco → teclado; Enter fecha o teclado em campo de uma linha | IDE |
 | `GmIdeActivity.java` | Superfície acima do teclado, barra de eco, barra de símbolos, vibração | UI |
 | `SDLActivity.java` | Tipo de entrada do IME (sem sugestões; modo código) e `gmCommitText` | UI |
 | `AndroidFileDialogs.cs` | Seletor de arquivos com o mesmo contrato do Linux | IDE |
+
+## Casca mobile-first
+
+Ampliar a escala não resolvia: a moldura de desktop (menu, barra de ferramentas, três docks fixos e uma faixa de abas em cada painel) ocupava metade da tela em paisagem. A casca troca essa moldura por views Android e deixa o editor com a tela inteira. Nenhuma função some: tudo que estava na moldura continua acessível.
+
+**É uma alternativa, não o padrão.** A interface desktop continua sendo a padrão, e as duas seguem recebendo melhorias. A casca é ligada no menu "⋯" do botão de atalhos ("Interface para celular"), e o fim do ⋮ da casca tem "Interface clássica (desktop)". A escolha fica gravada em `gmide/mobile_shell` (padrão `false`) e é aplicada ao vivo, sem reiniciar.
+
+```
++-----------------------------------------------------------------------+
+| Projeto / editor v   [Game Options] [Exportar] [> Executar] Dep. [] : |  barra (48dp)
++--------+--------------------------------------------------------------+
+|Recursos|                                                              |
+|Inspetor|                                                              |
+| ------ |        editor / workspace com a tela inteira                 |
+| Saida  |   (um painel do trilho abre como gaveta, empurrando)         |
+| Erros  |                                                              |
+| Busca  |                                                              |
++--------+--------------------------------------------------------------+
+ trilho (64dp)
+```
+
+- **Moldura escondida, não destruída.** `MobileShell.Apply` desliga com `RequestDisabled` os `StackedGadgets` da desktop que não contêm a grade dos docks (as linhas `ide_menu` e `ide_toolbar`). Também zera as linhas da faixa de abas (`TabControl.GridRowLayout`, menos `ClientPanelGridCell`) do workspace e dos três docks, e esconde os docks com `DockContainer.Hide()`. O `Hide` some até com a tirinha "«" que o dock recolhido mostra. A cada 30 quadros a casca confere se algum layout refeito trouxe a moldura de volta.
+- **Barra superior.** Mostra o nome do projeto (`ProjectManager.Current.name`) e o editor ativo (aba ativa do workspace). Um toque abre o seletor de editores. Também tem o progresso do build (`DesktopChrome.ProgressLabel`), os botões com ícone e rótulo "Game Options" (no teste, achar o Game Options dentro do menu foi difícil) e "Exportar" (a tela do host com Android APK, Web/HTML5 e Windows/EXE, o mesmo comando `apk` do botão de atalhos), e os botões Executar, Depurar e Parar: o toque chama `Button.ClickButton()` em `ide_toolbar_play`, `ide_toolbar_debug` e `ide_toolbar_stop`, e cada botão fica apagado quando o original está `Deactivated`. Por fim, o ⋮.
+- **Menu ⋮.** Tem duas seções:
+  - "Ações rápidas" começa com "Exportar jogo (APK, Web, Windows)" e reúne todos os botões das linhas escondidas da moldura, cada um com ícone e o nome da dica da IDE (`ToolTipCaption`, ou `Language.GetString` da chave). São Game Options, o alvo de compilação ("Alvo: Test | GMS2 VM | Default | Default", montado com os rótulos `target_select_label_*`), Salvar, Limpar, Criar executável, Novo/Abrir/Fechar projeto, Ajuda, zoom e conta. Executar, Depurar e Parar ficam de fora porque já estão na barra.
+  - "Menus" traz o menu original, nível a nível: as entradas do `MasterMenuBar` e, se for separado, do menu do módulo.
+  - Antes de listar, a casca faz o que a IDE faz ao abrir um menu: `OnActiveStateChange` (os rótulos se atualizam) e `UpdateLayoutAndRetrieveAllLeafEntries` (some o que tem feature flag desligada).
+  - Submenus preguiçosos (`LazyMenu`, `LazySubMenu`: projetos recentes, layouts...) são criados uma vez por abertura do ⋮.
+  - O toque num item chama `ClickButton()`, o mesmo caminho do Enter no menu da IDE. Itens com caixa alternam `CheckBox.Checked`, como o `MouseUp` original.
+  - Linhas de 52dp, itens desativados apagados, voltar pelo cabeçalho ou pelo botão voltar do Android.
+- **Seletor de editores** (substitui as faixas de abas): lista as abas do workspace (tocar ativa, ✕ fecha), "Novo workspace" (o mesmo `TabControl_AddButtonClicked` do "+") e as janelas de editor do workspace atual (tocar foca e leva a vista até ela).
+- **Trilho de painéis.** Tem um botão por aba de dock. Os painéis conhecidos ganham ícone próprio e um rótulo curto em português que cabe nos 64dp: Recursos, Inspetor, Saída, Erros, Busca, Versões (controle de versão), Pausas (breakpoints), Prefabs, Camadas. O nome original fica na descrição de acessibilidade e no cabeçalho do painel. Os painéis laterais vêm primeiro e os do dock de baixo depois de um divisor. Um toque abre aquele painel como gaveta (`Expand` + `ActivateTab`) e fecha as outras. Tocar de novo, ou tocar no workspace, fecha. No editor de sala a gaveta fica aberta enquanto se edita, porque nele os painéis são as ferramentas.
+- **Inspetor segue a seleção.** Selecionar algo num editor (uma instância na sala, por exemplo) dispara `InspectorManager.OnInspectorSelected`, e a casca abre a gaveta do dock que contém o `InspectorScrollPanel`. Seleções feitas dentro de um dock (Recursos, Camadas) não trocam a gaveta. Abrir a sala, que inspeciona o próprio `GMRoom`, também não.
+- **Modo foco.** Com o teclado aberto no editor de código (`KeyboardMode`), a barra e o trilho saem e o código fica com a altura toda.
+- **Interface clássica.** Ao voltar, a moldura reaparece e os docks com abas voltam recolhidos (`Collapse`), com a tirinha de expandir.
+- **Layout salvo.** Logo depois de abrir o projeto, a IDE restaura o layout salvo e expande ou recolhe os docks de novo. Até o usuário mexer num painel, ou por 15 s, a casca fecha esses docks outra vez. Depois disso, um dock "recolhido" pela IDE vira fechado, porque a tirinha não existe na casca.
+- **Canal.** Java → C#: comandos `shell:...` pela fila da barra de atalhos (`ShortcutBar.command`, tecla HELP, `ShortcutBridge`), aplicados na thread da IDE em `MobileFrame`. C# → Java: `MobileShell.onState(json)`, só quando o estado muda, e `MobileShell.onMenu(caminho, json)`.
 
 ## Toque
 

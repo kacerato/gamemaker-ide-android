@@ -113,6 +113,9 @@ static class ShortcutBridge
             case "apk-go":
                 ApkExport.Request(name, arg); // roda na thread da IDE (IdeSetup.OnInputObserved)
                 break;
+            case "shell":
+                MobileShell.Enqueue(arg);   // casca mobile (MobileShell.java); aplicado na thread da IDE
+                break;
             case "preview-stop":
             case "preview-show":
             case "preview-f5":

@@ -156,7 +156,7 @@ static class MobileWindowPolicy
     }
 
     /// <summary>Zoom 100% e vista ate a janela (canto superior esquerdo se ela for maior que a area).</summary>
-    static void ShowWindow(GUIBase win)
+    internal static void ShowWindow(GUIBase win)
     {
         try
         {
@@ -212,9 +212,11 @@ static class MobileWindowPolicy
             foreach (var d in details?.DockMan?.GetDocks() ?? Array.Empty<DockContainer>())
             {
                 if (d == null || d.Destroyed || d.DockState != eDockState.Expanded) continue;
-                if (d.DockType is not (eDockContainerType.eLeft or eDockContainerType.eRight)) continue;
+                // Com a casca (MobileShell) toda gaveta fecha, inclusive a de baixo (Saida...).
+                if (d.DockType is not (eDockContainerType.eLeft or eDockContainerType.eRight) &&
+                    !(MobileShell.Active && d.DockType == eDockContainerType.eBottom)) continue;
                 if (IsInside(near, d)) continue;
-                d.Collapse();
+                MobileShell.CloseDock(d);
                 Log.Info(Tag, $"Painel {d.DockType} recolhido (gaveta)");
             }
         }

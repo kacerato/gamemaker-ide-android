@@ -39,21 +39,22 @@ static class AndroidGameCompile
         }
     }
 
-    internal static Input Prepare()
+    internal static Input Prepare(string platform = "android")
     {
+        if (platform is not ("android" or "operagx")) throw new ArgumentException("Destino de exportacao invalido.");
         var common = Type.GetType("YoYoStudio.Plugins.Build.Common, Build", true)!;
         object? Call(string name, params object?[] args) => common.GetMethod(name, Static)!.Invoke(null, args);
         string Get(string name) => (string)common.GetProperty(name, Static)!.GetValue(null)!;
         Call("AssignMacros");
         Call("EnsureFontsGenerated");
         Call("WriteMacros");
-        Type.GetType("YoYoStudio.Plugins.Build.Preferences, Build", true)!
+        if (platform == "android") Type.GetType("YoYoStudio.Plugins.Build.Preferences, Build", true)!
             .GetMethod("WriteAndroidPreferences", Static)!.Invoke(null, null);
-        var env = (Dictionary<string, string>)Call("CreateDefaultEnvironment", "VM", "android")!;
+        var env = (Dictionary<string, string>)Call("CreateDefaultEnvironment", "VM", platform)!;
         if (!env.TryGetValue("config", out var config) || string.IsNullOrWhiteSpace(config)) env["config"] = "Default";
         string cache = Get("AssetCompileCache");
         Directory.CreateDirectory(cache);
-        string targetOptions = Path.Combine(cache, "apk-targetoptions.json");
+        string targetOptions = Path.Combine(cache, platform + "-export-targetoptions.json");
         File.WriteAllText(targetOptions, "{\"runtime\":\"VM\"}");
         env["targetOptions"] = targetOptions;
         env["verbose"] = "True";
@@ -77,7 +78,7 @@ static class AndroidGameCompile
         if (info.GetProperty("SerialiserDeveloperLeniencyMode", Static)?.GetValue(null) is true ||
             info.GetField("SerialiserDeveloperLeniencyMode", Static)?.GetValue(null) is true)
             env["sdlm"] = "true";
-        string bff = Path.Combine(cache, "apk-build.bff");
+        string bff = Path.Combine(cache, platform + "-export-build.bff");
         File.WriteAllText(bff, JsonSerializer.Serialize(env));
         // Common.WriteToBuildFile: -j=<MaxParallelJobs> e, fora do Windows, -ac=/cins no modo sem
         // diferenca de maiusculas (AssetCompilerOption).

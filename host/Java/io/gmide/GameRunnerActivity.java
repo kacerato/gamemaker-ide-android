@@ -46,6 +46,8 @@ public class GameRunnerActivity extends Activity {
     WebView web;
     File root;
     String rootCanon;
+    String contentHost = HOST;
+    boolean standalone;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,6 +68,7 @@ public class GameRunnerActivity extends Activity {
             @Override
             public boolean onConsoleMessage(ConsoleMessage m) {
                 Log.i(TAG, m.message() + " (" + m.sourceId() + ":" + m.lineNumber() + ")");
+                if (m.messageLevel() == ConsoleMessage.MessageLevel.ERROR) reportConsoleError(m);
                 return true;
             }
         });
@@ -77,11 +80,45 @@ public class GameRunnerActivity extends Activity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        if (intent.getStringExtra("url") == null && web != null) return;
         setIntent(intent);
         load(intent);
     }
 
+    // Telemetria (docs/telemetria.md): "Uncaught ..." e excecao nao tratada do jogo no runner GX
+    // e vira crash; outros console.error so contam. No maximo 5 registros por abertura.
+    int consoleReports;
+
+    void reportConsoleError(ConsoleMessage m) {
+        if (consoleReports >= 5) return;
+        consoleReports++;
+        String msg = m.message() == null ? "" : m.message();
+        String src = m.sourceId() == null ? "" : m.sourceId().replaceAll("^https?://[^/]+", "");
+        if (msg.startsWith("Uncaught")) {
+            int colon = msg.indexOf(':');
+            String type = colon > 0 && colon < 60 ? msg.substring(0, colon) : "Uncaught";
+            TelemetryConsent.recordRunner(this, "runner_js", type, msg, src + ":" + m.lineNumber());
+        } else {
+            try {
+                org.json.JSONObject p = new org.json.JSONObject();
+                p.put("source", src);
+                TelemetryConsent.recordEvent(this, "runner.console_error", p);
+            } catch (org.json.JSONException ignored) { }
+        }
+    }
+
     void load(Intent intent) {
+        standalone = intent.getBooleanExtra("standalone", false);
+        if (standalone) setTitle(intent.getStringExtra("title") == null ? "Prévia do jogo" : intent.getStringExtra("title"));
+        contentHost = HOST;
+        if (standalone) {
+            try {
+                byte[] hash = java.security.MessageDigest.getInstance("SHA-256").digest(intent.getStringExtra("storage_id").getBytes("UTF-8"));
+                StringBuilder host = new StringBuilder("game-");
+                for (int n = 0; n < 12; n++) host.append(String.format(java.util.Locale.ROOT, "%02x", hash[n] & 255));
+                contentHost = host.append(".gmide.local").toString();
+            } catch (Exception e) { Log.e(TAG, "Identificador da previa invalido", e); finish(); return; }
+        }
         String url = intent.getStringExtra("url");
         String r = intent.getStringExtra("root");
         root = null;
@@ -107,7 +144,7 @@ public class GameRunnerActivity extends Activity {
             String path = u.getEncodedPath();
             if (path == null || path.length() == 0 || path.equals("/")) path = "/runner.html";
             String q = u.getEncodedQuery();
-            String local = "https://" + HOST + path + (q != null ? "?" + q : "");
+            String local = "https://" + contentHost + path + (q != null ? "?" + q : "");
             Log.i(TAG, "Runner de " + rootCanon + " em " + local + " (Igor: " + url + ")");
             web.loadUrl(local);
         } else {
@@ -117,17 +154,30 @@ public class GameRunnerActivity extends Activity {
     }
 
     class RunnerClient extends WebViewClient {
+        // Sem este override o renderer que cai derruba o processo da IDE inteiro (mesmo processo).
+        @Override
+        public boolean onRenderProcessGone(WebView view, android.webkit.RenderProcessGoneDetail detail) {
+            boolean crashed = Build.VERSION.SDK_INT >= 26 && detail.didCrash();
+            Log.e(TAG, "Renderer do WebView encerrou (" + (crashed ? "crash" : "sistema liberou memoria") + ")");
+            TelemetryConsent.recordRunner(GameRunnerActivity.this, crashed ? "native" : "oom",
+                "RenderProcessGone", crashed ? "renderer crash" : "renderer killed by system", null);
+            if (web == view) web = null;
+            view.destroy();
+            finish();
+            return true;
+        }
+
         @Override
         public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest req) {
             Uri u = req.getUrl();
-            if (root == null || u == null || !HOST.equals(u.getHost())) return null;
+            if (root == null || u == null || !contentHost.equals(u.getHost())) return null;
             return serve(u.getPath());
         }
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest req) {
             Uri u = req.getUrl();
-            if (u != null && HOST.equals(u.getHost())) return false;
+            if (u != null && contentHost.equals(u.getHost())) return false;
             String scheme = u == null ? null : u.getScheme();
             if ("http".equals(scheme) || "https".equals(scheme)) {
                 // Links externos do jogo (url_open): navegador do aparelho.
@@ -221,7 +271,7 @@ public class GameRunnerActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        if (isFinishing()) stopRun();
+        if (isFinishing() && !standalone) stopRun();
         if (web != null) {
             web.loadUrl("about:blank");
             web.destroy();
@@ -238,5 +288,16 @@ public class GameRunnerActivity extends Activity {
         } catch (Exception e) {
             Log.w(TAG, "STOP_RUN: " + e);
         }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (standalone) {
+            Intent ide = new Intent();
+            ide.setClassName(getPackageName(), "io.gmide.GmIdeActivity");
+            ide.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+            startActivity(ide);
+            finish();
+        } else super.onBackPressed();
     }
 }

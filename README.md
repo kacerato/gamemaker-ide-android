@@ -1,7 +1,7 @@
 # GM IDE Android
 
 Port pessoal da IDE do GameMaker para Android ARM64, com integração de toque,
-teclado, compilação local Android VM, preview e exportação de APK.
+teclado, compilação local Android VM, preview e exportação de APK, WebAssembly e Windows com WebView2.
 
 ## Instalar ou atualizar
 
@@ -60,12 +60,15 @@ Os geradores de template/runner dependem do runtime GameMaker 2026.0.0.23.
 ## Funcionamento e limites
 
 - [Exportação Android VM e assinatura](docs/apk-export.md).
+- [Exportação Web e Windows pelo celular](docs/web-windows-export.md).
 - [Preview local e depuração](docs/run-preview.md).
+- [Telemetria opcional de uso e crashes](docs/telemetria.md).
 - [Interação mobile e validações registradas](docs/mobile-ui.md).
 - [Auditoria do port](docs/auditoria-port.md).
 - [Cenário Fazendinha](docs/teste-fazendinha.md).
 
-O fluxo de exportação suporta APK Android VM. YYC e AAB não são suportados.
+O exportador oferece APK Android VM, ZIP WebAssembly e ZIP Windows x64 com EXE
+baseado em WebView2. YYC, AAB e Windows VM nativo não são suportados.
 Extensões Java/Kotlin precisam estar integradas ao modelo do runner.
 As validações em aparelhos descritas nos documentos são históricas e não
 equivalem à aceitação de cada novo APK; confira as notas do release.

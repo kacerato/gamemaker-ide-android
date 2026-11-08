@@ -124,6 +124,16 @@ public static class LocalGameRun
 
     public static int RunAndWait()
     {
+        try { return RunAndWaitCore(); }
+        catch (Exception e)
+        {
+            Telemetry.Event("game.run", new() { ["result"] = "start_failed", ["error"] = e.GetType().Name, ["message"] = Telemetry.Scrub(e.Message) });
+            throw;
+        }
+    }
+
+    static int RunAndWaitCore()
+    {
         string directory = GameDirectory, zip = Path.Combine(directory, "game.zip");
         if (!File.Exists(zip)) throw new FileNotFoundException("Compile o projeto antes de repetir o preview.", zip);
         Stop();
@@ -146,6 +156,12 @@ public static class LocalGameRun
         while (startup.Elapsed < TimeSpan.FromSeconds(30) && (pid = GamePid()) == 0) Thread.Sleep(100);
         if (pid == 0) throw new TimeoutException("O runner Android nao iniciou em 30 segundos.");
         Console.WriteLine($"[GMIDE] Preview iniciado (processo {pid}). Use Stop na IDE para encerrar a execucao.");
+        BuildTelemetry.CompileDone();
+        var played = Stopwatch.StartNew();
+        // Telemetria: ultimas linhas do jogo e o bloco do crash (FATAL EXCEPTION / Fatal signal).
+        var tail = new Queue<string>();
+        var crash = new List<string>();
+        string? crashKind = null;
         var start = new ProcessStartInfo("/system/bin/logcat") { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
         foreach (string arg in new[] { "-v", "brief", "--pid=" + pid, "yoyo:V", "AndroidRuntime:E", "libc:E", "*:S" }) start.ArgumentList.Add(arg);
         using var log = System.Diagnostics.Process.Start(start) ?? throw new IOException("Nao foi possivel ler o log do preview.");
@@ -156,6 +172,14 @@ public static class LocalGameRun
             while ((line = log.StandardOutput.ReadLine()) != null)
             {
                 if (line.Contains("FATAL EXCEPTION") || line.Contains("Fatal signal")) Interlocked.Exchange(ref failed, 1);
+                lock (tail)
+                {
+                    tail.Enqueue(line);
+                    if (tail.Count > 200) tail.Dequeue();
+                    if (crashKind == null && line.Contains("FATAL EXCEPTION")) crashKind = "java";
+                    else if (crashKind == null && line.Contains("Fatal signal")) crashKind = "native";
+                    if (crashKind != null && crash.Count < 80) crash.Add(line);
+                }
                 if (line.Contains("[GMIDE] Native preview ready")) Interlocked.Exchange(ref ready, 1);
                 // F6 can intentionally stop in Startup before the first room/frame.
                 if (line.Contains("Debugger connected")) Interlocked.Exchange(ref debuggerConnected, 1);
@@ -186,6 +210,21 @@ public static class LocalGameRun
             pump.Wait(TimeSpan.FromSeconds(2));
         }
         Console.WriteLine("[GMIDE] Preview encerrado.");
+        bool started = ready != 0 || debuggerConnected != 0;
+        Telemetry.Event("game.run", new()
+        {
+            ["result"] = !started ? "died_on_start" : failed != 0 ? "crash" : "ok",
+            ["seconds"] = (long)played.Elapsed.TotalSeconds,
+            ["debug"] = Environment.GetEnvironmentVariable("GMIDE_ANDROID_DEBUG") == "1",
+        });
+        if (failed != 0 || !started)
+        {
+            string[] lines; lock (tail) lines = tail.ToArray();
+            string? first; lock (tail) first = crash.Count > 0 ? crash[0] : null;
+            Telemetry.CrashRecord("game", crashKind ?? "killed", crashKind == "native" ? "Fatal signal" : crashKind == "java" ? "FATAL EXCEPTION" : "runner exited before init",
+                first, crash.Count > 0 ? string.Join("\n", crash) : null, string.Join("\n", lines),
+                new System.Text.Json.Nodes.JsonObject { ["started"] = started, ["seconds"] = (long)played.Elapsed.TotalSeconds });
+        }
         if (ready == 0 && debuggerConnected == 0) { Console.Error.WriteLine("[GMIDE] O runner encerrou antes de inicializar o jogo."); return 1; }
         return failed;
     }

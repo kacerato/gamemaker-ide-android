@@ -133,9 +133,9 @@ public class ApkExportActivity extends Activity {
                 String st = j.optString("state");
                 if (sApp == null) return;
                 if (st.equals("done"))
-                    Toast.makeText(sApp, "APK gerado: " + new File(j.optString("message")).getName(), Toast.LENGTH_LONG).show();
+                    Toast.makeText(sApp, "Jogo exportado: " + new File(j.optString("message")).getName(), Toast.LENGTH_LONG).show();
                 else if (st.equals("error"))
-                    Toast.makeText(sApp, "Falha ao gerar APK: " + j.optString("message"), Toast.LENGTH_LONG).show();
+                    Toast.makeText(sApp, "Falha ao exportar: " + j.optString("message"), Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -166,6 +166,34 @@ public class ApkExportActivity extends Activity {
     TextView progressStep, progressLog;
     final ArrayDeque<String> logLines = new ArrayDeque<String>();
     String resultPath;
+    String target = "android", previewPath;
+    EditText windowWidth, windowHeight;
+
+    JSONObject targetOptions() {
+        JSONObject all = initial.optJSONObject("targets");
+        JSONObject options = all == null ? null : all.optJSONObject(target);
+        return options == null ? initial : options;
+    }
+
+    void selectTarget(String next) {
+        if (state != FORM || next.equals(target)) return;
+        try {
+            JSONObject old = targetOptions();
+            old.put("display_name", name.getText().toString());
+            old.put("version", version.getText().toString());
+            old.put("package", pkg.getText().toString());
+            old.put("file_name", fileName.getText().toString());
+            old.put("icon_path", iconPath == null ? "" : iconPath);
+            old.put("icon_override", iconOverride);
+            if (windowWidth != null) {
+                old.put("window_width", windowWidth.getText().toString());
+                old.put("window_height", windowHeight.getText().toString());
+            }
+        } catch (JSONException e) { toast(e.getMessage()); }
+        target = next;
+        iconOverride = targetOptions().optBoolean("icon_override", false);
+        formView = buildForm(); showForm();
+    }
 
     @Override
     protected void onCreate(Bundle b) {
@@ -262,7 +290,7 @@ public class ApkExportActivity extends Activity {
         header.setGravity(Gravity.CENTER_VERTICAL);
         header.setBackgroundColor(C_HEADER);
         header.setPadding(dp(16), 0, dp(4), 0);
-        TextView title = text("Gerar APK para Android", 15, C_TEXT, semibold);
+        TextView title = text("Exportar jogo", 15, C_TEXT, semibold);
         header.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         String project = initial.optString("project", "");
         if (project.length() > 0) {
@@ -325,6 +353,18 @@ public class ApkExportActivity extends Activity {
         col.setOrientation(LinearLayout.VERTICAL);
         col.setPadding(dp(16), dp(14), dp(16), dp(14));
 
+        LinearLayout destinations = new LinearLayout(this);
+        final String[] ids = { "android", "web", "windows" };
+        String[] labels = { "Android · APK", "Web · ZIP", "Windows · EXE" };
+        for (int i = 0; i < ids.length; i++) {
+            final String id = ids[i];
+            TextView tab = button(labels[i], target.equals(id));
+            tab.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { selectTarget(id); } });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(44), 1);
+            lp.setMargins(0, 0, dp(6), dp(12)); destinations.addView(tab, lp);
+        }
+        col.addView(destinations);
+
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         col.addView(row);
@@ -367,22 +407,32 @@ public class ApkExportActivity extends Activity {
         r1.setOrientation(LinearLayout.HORIZONTAL);
         fields.addView(r1);
         LinearLayout nameCol = column();
-        name = field(nameCol, "Nome do app", initial.optString("display_name", ""), InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        name = field(nameCol, "Nome do jogo", targetOptions().optString("display_name", ""), InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
         nameErr = errorText(nameCol);
         r1.addView(nameCol, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         LinearLayout verCol = column();
-        version = field(verCol, "Versão", initial.optString("version", "1.0.0.0"), InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        version = field(verCol, "Versão", targetOptions().optString("version", "1.0.0.0"), InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         versionErr = errorText(verCol);
         LinearLayout.LayoutParams vl = new LinearLayout.LayoutParams(dp(130), ViewGroup.LayoutParams.WRAP_CONTENT);
         vl.leftMargin = dp(12);
         r1.addView(verCol, vl);
 
-        pkg = field(fields, "Pacote (identificador único do app)", initial.optString("package", "com.company.game"),
+        pkg = field(fields, target.equals("android") ? "Pacote (identificador único do app)" : "Identificador dos dados salvos", targetOptions().optString("package", initial.optString("package", "com.company.game")),
                 InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS | InputType.TYPE_TEXT_VARIATION_URI);
         pkgErr = errorText(fields);
 
-        String fn = initial.optString("file_name", "jogo.apk");
-        if (fn.toLowerCase(Locale.ROOT).endsWith(".apk")) fn = fn.substring(0, fn.length() - 4);
+        windowWidth = null; windowHeight = null;
+        if (target.equals("windows")) {
+            LinearLayout dimensions = new LinearLayout(this);
+            LinearLayout wc = column(), hc = column();
+            windowWidth = field(wc, "Largura da janela", targetOptions().optString("window_width", "1280"), InputType.TYPE_CLASS_NUMBER);
+            windowHeight = field(hc, "Altura da janela", targetOptions().optString("window_height", "720"), InputType.TYPE_CLASS_NUMBER);
+            dimensions.addView(wc, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+            dimensions.addView(hc, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+            fields.addView(dimensions);
+        }
+        String fn = targetOptions().optString("file_name", "jogo" + extension());
+        if (fn.toLowerCase(Locale.ROOT).endsWith(extension())) fn = fn.substring(0, fn.length() - 4);
         fileName = field(fields, "Salvar como", fn, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         fileName.setImeOptions(EditorInfo.IME_ACTION_DONE | EditorInfo.IME_FLAG_NO_EXTRACT_UI | EditorInfo.IME_FLAG_NO_FULLSCREEN);
         fileName.setOnEditorActionListener(new TextView.OnEditorActionListener() {
@@ -405,8 +455,9 @@ public class ApkExportActivity extends Activity {
         version.addTextChangedListener(w);
         pkg.addTextChangedListener(w);
         fileName.addTextChangedListener(w);
+        if (windowWidth != null) { windowWidth.addTextChangedListener(w); windowHeight.addTextChangedListener(w); }
 
-        String ip = initial.optString("icon_path", "");
+        String ip = targetOptions().optString("icon_path", "");
         if (ip.length() > 0 && !ip.equals("null") && new File(ip).isFile()) showIcon(ip);
         else showIcon(null);
         return col;
@@ -424,12 +475,12 @@ public class ApkExportActivity extends Activity {
         state = FORM;
         setBody(formView);
         String ks = new File(initial.optString("keystore", "gmide-release.p12")).getName();
-        footerNote.setText("Assinatura: " + ks);
+        footerNote.setText(target.equals("android") ? "Assinatura: " + ks : target.equals("web") ? "WebAssembly · pronto para hospedagem web" : "Windows x64 · requer WebView2 · ZIP com EXE");
         secondaryBtn.setText("Cancelar");
         secondaryBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { finish(); }
         });
-        primaryBtn.setText("Gerar APK");
+        primaryBtn.setText(target.equals("android") ? "Gerar APK" : "Gerar ZIP");
         primaryBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { submit(); }
         });
@@ -461,7 +512,7 @@ public class ApkExportActivity extends Activity {
         col.addView(progressLog, ll);
         logLines.clear();
         setBody(col);
-        footerNote.setText("Você pode fechar; o APK continua sendo gerado.");
+        footerNote.setText("Você pode fechar; a exportação continua em andamento.");
         secondaryBtn.setVisibility(View.GONE);
         primaryBtn.setText("Fechar");
         setEnabled(primaryBtn, true);
@@ -492,7 +543,8 @@ public class ApkExportActivity extends Activity {
         if (ok) {
             resultPath = message;
             File f = new File(message);
-            texts.addView(text("APK gerado", 16, C_TEXT, semibold));
+            previewPath = j.optString("preview", "");
+            texts.addView(text(target.equals("android") ? "APK gerado" : "Pacote gerado", 16, C_TEXT, semibold));
             String info = f.getName() + "  ·  " + size(j.optLong("size", f.length())) + "  ·  " + j.optDouble("seconds", 0) + " s";
             TextView t = text(info, 13, C_TEXT, regular);
             t.setPadding(0, dp(4), 0, 0);
@@ -502,19 +554,19 @@ public class ApkExportActivity extends Activity {
             texts.addView(p);
             TextView pk = text("Pacote " + j.optString("package", ""), 12, C_DIM, regular);
             texts.addView(pk);
-            footerNote.setText("Para atualizar um jogo instalado, use sempre a mesma assinatura.");
+            footerNote.setText(target.equals("android") ? "Para atualizar, use sempre a mesma assinatura." : target.equals("windows") ? "Extraia o ZIP no Windows e abra o EXE." : "Hospede o ZIP extraído para jogar no navegador.");
             secondaryBtn.setVisibility(View.VISIBLE);
-            secondaryBtn.setText("Fechar");
+            secondaryBtn.setText(target.equals("android") ? "Fechar" : "Compartilhar ZIP");
             secondaryBtn.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) { finish(); }
+                public void onClick(View v) { if (target.equals("android")) finish(); else share(); }
             });
-            primaryBtn.setText("Instalar");
+            primaryBtn.setText(target.equals("android") ? "Instalar" : "Prévia web");
             primaryBtn.setBackground(buttonBg(true));
             primaryBtn.setOnClickListener(new View.OnClickListener() {
-                public void onClick(View v) { install(); }
+                public void onClick(View v) { if (target.equals("android")) install(); else preview(); }
             });
         } else {
-            texts.addView(text("Não foi possível gerar o APK", 16, C_TEXT, semibold));
+            texts.addView(text("Não foi possível exportar o jogo", 16, C_TEXT, semibold));
             TextView t = text(message, 13, C_DIM, regular);
             t.setPadding(0, dp(4), 0, 0);
             t.setTextIsSelectable(true);
@@ -557,13 +609,19 @@ public class ApkExportActivity extends Activity {
         if (name == null) return false;
         boolean ok = true;
         String n = name.getText().toString().trim();
-        ok &= setError(nameErr, n.length() == 0 ? "Informe o nome do app" : null);
+        ok &= setError(nameErr, n.length() == 0 ? "Informe o nome do jogo" : n.length() > 200 || n.indexOf('\n') >= 0 || n.indexOf('"') >= 0 ? "Use até 200 caracteres, sem aspas ou quebras de linha" : null);
         String v = version.getText().toString().trim();
         ok &= setError(versionErr, VERSION.matcher(v).matches() ? null : "Use números, ex.: 1.0.0.0");
         ok &= setError(pkgErr, packageError(pkg.getText().toString().trim()));
         String f = fileName.getText().toString().trim();
         ok &= setError(fileErr, f.length() == 0 ? "Informe o nome do arquivo"
-                : f.indexOf('/') >= 0 || f.indexOf('\\') >= 0 ? "Só o nome do arquivo, sem pastas" : null);
+                : f.indexOf('/') >= 0 || f.indexOf('\\') >= 0 || f.equals(".") || f.equals("..") ? "Só o nome do arquivo, sem pastas" : null);
+        if (windowWidth != null) {
+            try {
+                int width = Integer.parseInt(windowWidth.getText().toString()), height = Integer.parseInt(windowHeight.getText().toString());
+                if (width < 320 || width > 7680 || height < 240 || height > 4320) ok &= setError(fileErr, "Janela: largura 320–7680, altura 240–4320");
+            } catch (NumberFormatException e) { ok &= setError(fileErr, "Informe a largura e a altura da janela"); }
+        }
         outputHint.setText(f.length() > 0 ? "Em " + shortDir(initial.optString("output_dir", "")) + "/" + outputFile().getName() : "");
         setEnabled(primaryBtn, ok);
         return ok;
@@ -587,10 +645,12 @@ public class ApkExportActivity extends Activity {
 
     File outputFile() {
         String f = fileName.getText().toString().trim();
-        if (!f.toLowerCase(Locale.ROOT).endsWith(".apk")) f += ".apk";
+        if (!f.toLowerCase(Locale.ROOT).endsWith(extension())) f += extension();
         String dir = initial.optString("output_dir", "/storage/emulated/0/Download");
         return new File(dir, f);
     }
+
+    String extension() { return target.equals("android") ? ".apk" : ".zip"; }
 
     static String shortDir(String dir) {
         String root = "/storage/emulated/0/";
@@ -602,11 +662,16 @@ public class ApkExportActivity extends Activity {
         if (!validate()) return;
         try {
             JSONObject j = new JSONObject();
+            j.put("target", target);
             j.put("display_name", name.getText().toString().trim());
             j.put("package", pkg.getText().toString().trim());
             j.put("version", version.getText().toString().trim());
             j.put("output", outputFile().getAbsolutePath());
-            if (iconOverride && iconPath != null) j.put("icon_path", iconPath);
+            if ((iconOverride || !target.equals("android")) && iconPath != null) j.put("icon_path", iconPath);
+            if (windowWidth != null) {
+                j.put("window_width", Integer.parseInt(windowWidth.getText().toString()));
+                j.put("window_height", Integer.parseInt(windowHeight.getText().toString()));
+            }
             Log.i(TAG, "Gerar APK: " + j);
             showBuilding();
             sRequests.offer("build:" + j.toString());
@@ -622,6 +687,27 @@ public class ApkExportActivity extends Activity {
         else finish();
     }
 
+    void preview() {
+        if (previewPath == null || !new File(previewPath, "index.html").isFile()) { toast("Arquivos da prévia indisponíveis; gere o pacote novamente."); return; }
+        Intent i = new Intent(this, GameRunnerActivity.class);
+        i.putExtra("root", previewPath); i.putExtra("url", "https://appassets.androidplatform.net/index.html");
+        i.putExtra("standalone", true); i.putExtra("storage_id", pkg.getText().toString().trim());
+        i.putExtra("title", name.getText().toString().trim());
+        startActivity(i);
+        finish(); // Release the export session; Back from the game returns to the IDE.
+    }
+
+    void share() {
+        try {
+            Uri uri = (Uri) Class.forName("androidx.core.content.FileProvider")
+                    .getMethod("getUriForFile", Context.class, String.class, File.class)
+                    .invoke(null, this, getPackageName() + ".exports", new File(resultPath));
+            Intent i = new Intent(Intent.ACTION_SEND); i.setType("application/zip");
+            i.putExtra(Intent.EXTRA_STREAM, uri); i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivity(Intent.createChooser(i, "Compartilhar jogo"));
+        } catch (Exception e) { toast("Não foi possível compartilhar: " + e.getMessage()); }
+    }
+
     // ------------------------------------------------------------------ icone
 
     void chooseIcon() {
@@ -632,11 +718,16 @@ public class ApkExportActivity extends Activity {
         startActivityForResult(i, PICK_ICON);
     }
 
+    String iconStore() {
+        String base = initial.optString("icon_store", "");
+        return base.length() == 0 ? "" : base + "." + target;
+    }
+
     void clearIcon() {
-        String store = initial.optString("icon_store", "");
+        String store = iconStore();
         if (store.length() > 0) new File(store).delete();
         iconOverride = false;
-        String projectIcon = initial.optString("icon_path", "");
+        String projectIcon = targetOptions().optString("icon_path", "");
         showIcon(projectIcon.length() > 0 && !projectIcon.equals("null") ? projectIcon : null);
     }
 
@@ -662,7 +753,7 @@ public class ApkExportActivity extends Activity {
         hideSystemBars();
         if (requestCode != PICK_ICON || resultCode != RESULT_OK || data == null || data.getData() == null) return;
         Uri uri = data.getData();
-        String store = initial.optString("icon_store", "");
+        String store = iconStore();
         File dest = store.length() > 0 ? new File(store) : new File(getFilesDir(), "apk-export/icon-source");
         File tmp = new File(dest.getPath() + ".tmp");
         try {

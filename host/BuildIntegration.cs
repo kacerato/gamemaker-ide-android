@@ -45,6 +45,8 @@ public static class BuildIntegration
                 return;
             }
             var runtimeDir = RuntimeImport.Run() ?? RuntimeImport.DefaultRuntimeDir();
+            Telemetry.SetRuntimeDir(runtimeDir);
+            TelemetryUploader.RefreshApp(app);
             // A IDE so aceita ${webserver_path} chamado GMWebServer(.exe): link para o stub.
             try
             {

@@ -454,7 +454,7 @@ public final class ShortcutBar {
         setColor(stop, 0xFF833B39);
         stop.setOnClickListener(new View.OnClickListener() { public void onClick(View v) { closePanel("parar"); sendCommand("preview-stop"); } });
         add(r3, stop);
-        TextView apk = makeButton("APK", "Gerar APK do jogo (nome, pacote, versao...)");
+        TextView apk = makeButton("Exportar", "Exportar jogo: Android APK, Web ou Windows");
         apk.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 closePanel("apk");
@@ -670,7 +670,8 @@ public final class ShortcutBar {
         m.add(1, 201, 51, "Escala da UI −");
         m.add(1, 202, 52, "Escala da UI: automatica");
         m.add(2, 300, 60, "Botao de atalhos: posicao padrao");
-        m.add(3, 400, 70, "Gerar APK do jogo...");
+        m.add(3, 400, 70, "Exportar jogo (APK, Web, Windows)...");
+        m.add(4, 500, 80, TelemetryConsent.menuLabel(sActivity));
         pm.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             public boolean onMenuItemClick(MenuItem item) {
                 int id = item.getItemId();
@@ -680,6 +681,8 @@ public final class ShortcutBar {
                     changeScale(id == 200 ? 5 : -5);
                 } else if (id == 202) {
                     setScale(0);
+                } else if (id == 500) {
+                    TelemetryConsent.toggle(sActivity);
                 } else if (id == 400) {
                     closePanel("apk");
                     sendCommand("apk");

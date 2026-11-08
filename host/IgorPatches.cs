@@ -16,7 +16,7 @@ namespace GmIde;
 //    GMAssetCompiler.dll, que e a copia com o patch.
 public static class IgorPatches
 {
-    const string Marker = ".gmide-assetcompiler-patch-4";
+    const string Marker = ".gmide-assetcompiler-patch-5";
     const string IgorMarker = ".gmide-igor-patch-7";
 
     /// <summary>Pasta do espelho do GMAssetCompiler para o build atual (BuildBridge.Dispatch).</summary>
@@ -200,8 +200,11 @@ public static class IgorPatches
 
     public static bool IsLocalAndroidExport(object? machine)
     {
-        if (!OperatingSystem.IsAndroid() || Environment.GetEnvironmentVariable("GMIDE_LOCAL_ANDROID_EXPORT") != "1" ||
-            machine?.GetType().FullName != "GMAssetCompiler.Machines.Android") return false;
+        if (!OperatingSystem.IsAndroid() || machine == null) return false;
+        string? type = machine.GetType().FullName;
+        bool android = Environment.GetEnvironmentVariable("GMIDE_LOCAL_ANDROID_EXPORT") == "1" && type == "GMAssetCompiler.Machines.Android";
+        bool web = Environment.GetEnvironmentVariable("GMIDE_LOCAL_WEB_EXPORT") == "1" && type == "GMAssetCompiler.Machines.OperaGX";
+        if (!android && !web) return false;
         var program = machine.GetType().Assembly.GetType("GMAssetCompiler.Program", true)!;
         foreach (string name in new[] { "FeatureFlagsEnable", "FeatureFlagsDisable" })
         {

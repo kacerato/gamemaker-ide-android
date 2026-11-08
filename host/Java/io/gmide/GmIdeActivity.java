@@ -47,6 +47,11 @@ public class GmIdeActivity extends SDLActivity {
         super.onCreate(savedInstanceState);
         applySafeMargin();
         ShortcutBar.install(this);   // barra de atalhos (Esc, Ctrl/Shift/Alt, clique direito, teclado...)
+        // Telemetria opcional (docs/telemetria.md): pergunta uma vez, depois que a IDE comecou a abrir.
+        getWindow().getDecorView().postDelayed(new Runnable() {
+            @Override
+            public void run() { TelemetryConsent.askIfNeeded(GmIdeActivity.this); }
+        }, 8000);
         followKeyboard();
         hideSystemUi();
         handlePreviewAction(getIntent());

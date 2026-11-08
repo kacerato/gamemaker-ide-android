@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>GM IDE Telemetria</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--fg:#1c2128;--muted:#5b6573;--line:#e3e6ea;--accent:#2563eb;--bad:#c2410c;--ok:#15803d;--warn:#a16207;--mono:ui-monospace,SFMono-Regular,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root{--bg:#111418;--card:#181c21;--fg:#e6e9ee;--muted:#98a2b0;--line:#2a3038;--accent:#6ea0ff;--bad:#f08a5d;--ok:#4ade80;--warn:#facc15}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:2}
+header h1{font-size:16px;margin:0 auto 0 0}
+select,button{font:inherit;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+main{padding:20px;max-width:1280px;margin:0 auto;display:grid;gap:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.kpi,.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px}
+.kpi .v{font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}
+.kpi .l{color:var(--muted);font-size:12px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:16px}
+.card h2{font-size:13px;margin:0 0 10px;color:var(--muted);font-weight:600;text-transform:none}
+table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:500;color:var(--muted);font-size:12px}
+td.n,th.n{text-align:right}
+tr.click{cursor:pointer} tr.click:hover{background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.pill{display:inline-block;padding:1px 7px;border-radius:999px;font-size:11px;border:1px solid var(--line)}
+.pill.open{color:var(--bad);border-color:var(--bad)} .pill.fixed{color:var(--ok);border-color:var(--ok)} .pill.ignored{color:var(--muted)}
+.title{font-family:var(--mono);font-size:12px;word-break:break-all}
+pre{font-family:var(--mono);font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px;overflow:auto;max-height:340px;white-space:pre-wrap;word-break:break-all}
+.muted{color:var(--muted)} .bad{color:var(--bad)} .ok{color:var(--ok)}
+svg text{fill:var(--muted);font-size:10px}
+#detail{display:none} #detail.on{display:block}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.empty{color:var(--muted);padding:8px 0}
+@media (max-width:520px){main{padding:12px}.grid2{grid-template-columns:1fr}header{padding:12px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>GM IDE Android · telemetria</h1>
+  <select id="days"><option value="7">7 dias</option><option value="30" selected>30 dias</option><option value="90">90 dias</option></select>
+  <button id="reload">Atualizar</button>
+  <button id="logout">Trocar token</button>
+</header>
+<main>
+  <div id="err" class="card bad" hidden></div>
+  <section class="kpis" id="kpis"></section>
+  <section class="grid2">
+    <div class="card"><h2>Sessões e crashes por dia</h2><div id="chartSessions"></div></div>
+    <div class="card"><h2>Builds por dia (ok / falha)</h2><div id="chartBuilds"></div></div>
+  </section>
+  <section class="card"><h2>Crashes agrupados</h2><div id="groups"></div></section>
+  <section class="card" id="detail"></section>
+  <section class="grid2">
+    <div class="card"><h2>Builds por alvo</h2><div id="builds"></div></div>
+    <div class="card"><h2>Erros de build mais comuns</h2><div id="buildErrors"></div></div>
+  </section>
+  <section class="grid2">
+    <div class="card"><h2>Versões</h2><div id="versions"></div></div>
+    <div class="card"><h2>Aparelhos</h2><div id="devices"></div></div>
+  </section>
+  <section class="card"><h2>Uso de recursos</h2><div id="features"></div></section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pct = (a, b) => (b ? (100 * a / b).toFixed(1) + "%" : "—");
+const ms = (v) => (v == null ? "—" : v >= 1000 ? (v / 1000).toFixed(1) + " s" : v + " ms");
+const ago = (t) => { const d = (Date.now() - Date.parse(t)) / 36e5; return d < 1 ? "agora" : d < 48 ? Math.round(d) + " h" : Math.round(d / 24) + " d"; };
+const Targets = { run_gx: "Run GX (WebView)", run_android: "Run Android (VM)", apk: "Gerar APK", web: "Export Web", windows: "Export Windows", other: "Outro" };
+
+function token() {
+  let t = null;
+  try { t = localStorage.getItem("gmide-admin"); } catch {}
+  if (!t) { t = prompt("Token do painel (ADMIN_TOKEN)"); if (t) try { localStorage.setItem("gmide-admin", t); } catch {} }
+  return t;
+}
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: { authorization: "Bearer " + token(), "content-type": "application/json", ...(opts.headers || {}) } });
+  if (r.status === 401) { try { localStorage.removeItem("gmide-admin"); } catch {} throw new Error("Token recusado. Clique em Atualizar e informe de novo."); }
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.statusText);
+  return r.json();
+}
+function table(rows, cols, opts = {}) {
+  if (!rows.length) return '<div class="empty">Sem dados no período.</div>';
+  const head = cols.map((c) => `<th class="${c.n ? "n" : ""}">${c.h}</th>`).join("");
+  const body = rows.map((r, i) => `<tr class="${opts.click ? "click" : ""}" data-i="${i}">${cols.map((c) => `<td class="${c.n ? "n" : ""}">${c.f ? c.f(r) : esc(r[c.k])}</td>`).join("")}</tr>`).join("");
+  return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+function bars(daily, series) {
+  if (!daily.length) return '<div class="empty">Sem dados no período.</div>';
+  const W = 600, H = 150, pad = 18, n = daily.length, bw = (W - pad) / n;
+  const max = Math.max(1, ...daily.map((d) => series.reduce((s, x) => s + Number(d[x.k]), 0)));
+  let g = "";
+  daily.forEach((d, i) => {
+    let y = H - pad;
+    for (const s of series) {
+      const h = (Number(d[s.k]) / max) * (H - pad - 6);
+      y -= h;
+      g += `<rect x="${pad + i * bw + 1}" y="${y}" width="${Math.max(1, bw - 2)}" height="${h}" fill="${s.c}"><title>${d.day.slice(0, 10)} · ${s.h}: ${d[s.k]}</title></rect>`;
+    }
+  });
+  const first = daily[0].day.slice(5, 10), last = daily[n - 1].day.slice(5, 10);
+  const legend = series.map((s) => `<span class="row" style="display:inline-flex;margin-right:12px"><span style="width:10px;height:10px;background:${s.c};display:inline-block;border-radius:2px"></span>${s.h}</span>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img"><text x="0" y="10">${max}</text><text x="${pad}" y="${H - 4}">${first}</text><text x="${W - 30}" y="${H - 4}">${last}</text>${g}</svg><div class="muted" style="font-size:12px">${legend}</div>`;
+}
+
+let groups = [];
+async function load() {
+  $("err").hidden = true;
+  try {
+    const d = await api(`/api/admin/summary?days=${$("days").value}`);
+    const t = d.totals, b = d.builds.reduce((a, x) => ({ total: a.total + x.total, ok: a.ok + x.ok }), { total: 0, ok: 0 });
+    $("kpis").innerHTML = [
+      ["Sessões", t.sessions], ["Instalações ativas", t.installs],
+      ["Sessões sem crash", pct(t.sessions - t.crashed_sessions, t.sessions)],
+      ["Crashes (todos processos)", t.crashes], ["Instalações com crash", pct(t.crashed_installs, t.installs)],
+      ["Builds com sucesso", pct(b.ok, b.total)], ["Abertura p50 / p95", `${ms(t.boot_p50)} / ${ms(t.boot_p95)}`],
+      ["Sessão p50", t.session_p50_s == null ? "—" : Math.round(t.session_p50_s / 60) + " min"],
+    ].map(([l, v]) => `<div class="kpi"><div class="v">${esc(v)}</div><div class="l">${l}</div></div>`).join("");
+    $("chartSessions").innerHTML = bars(d.daily, [{ k: "sessions", h: "sessões", c: "var(--accent)" }, { k: "crashes", h: "crashes", c: "var(--bad)" }]);
+    const bd = d.daily.map((x) => ({ ...x, fail: x.builds - x.builds_ok }));
+    $("chartBuilds").innerHTML = bars(bd, [{ k: "builds_ok", h: "ok", c: "var(--ok)" }, { k: "fail", h: "falha", c: "var(--bad)" }]);
+    groups = d.groups;
+    $("groups").innerHTML = table(groups, [
+      { h: "Status", f: (r) => `<span class="pill ${r.status}">${r.status}${r.fixed_in ? " " + esc(r.fixed_in) : ""}</span>` },
+      { h: "Processo", f: (r) => `${esc(r.process)} · ${esc(r.kind)}` },
+      { h: "Crash", f: (r) => `<span class="title">${esc(r.title)}</span>` },
+      { h: "Versões", f: (r) => `${esc(r.first_version)} → ${esc(r.last_version)}` },
+      { h: "Ocorr.", k: "hits", n: 1 }, { h: "Aparelhos", k: "installs", n: 1 },
+      { h: "Último", f: (r) => ago(r.last_seen), n: 1 },
+    ], { click: true });
+    $("groups").querySelectorAll("tr.click").forEach((tr) => tr.onclick = () => detail(groups[tr.dataset.i].signature));
+    $("builds").innerHTML = table(d.builds, [
+      { h: "Alvo", f: (r) => esc(Targets[r.target] || r.target) }, { h: "Total", k: "total", n: 1 },
+      { h: "Sucesso", f: (r) => pct(r.ok, r.total), n: 1 }, { h: "Erro GML", k: "gml_error", n: 1 },
+      { h: "Crash/morto", f: (r) => `<span class="${r.crashed ? "bad" : ""}">${r.crashed}</span>`, n: 1 },
+      { h: "p50", f: (r) => ms(r.p50_ms), n: 1 }, { h: "p95", f: (r) => ms(r.p95_ms), n: 1 },
+    ]);
+    $("buildErrors").innerHTML = table(d.buildErrors, [
+      { h: "Alvo", f: (r) => esc(Targets[r.target] || r.target) }, { h: "Resultado", k: "result" },
+      { h: "Erro", f: (r) => `<span class="title">${esc(r.sample || "(sem texto)")}</span>` },
+      { h: "Ocorr.", k: "hits", n: 1 }, { h: "Aparelhos", k: "installs", n: 1 },
+    ]);
+    $("versions").innerHTML = table(d.versions, [
+      { h: "Versão", k: "version" }, { h: "Sessões", k: "sessions", n: 1 }, { h: "Instalações", k: "installs", n: 1 },
+      { h: "Sem crash", f: (r) => pct(r.sessions - r.crashed_sessions, r.sessions), n: 1 },
+    ]);
+    $("devices").innerHTML = table(d.devices, [
+      { h: "Modelo", k: "model" }, { h: "API", k: "api", n: 1 }, { h: "SoC", k: "gpu" },
+      { h: "RAM", f: (r) => (r.ram_mb ? (r.ram_mb / 1024).toFixed(1) + " GB" : "—"), n: 1 }, { h: "Instalações", k: "installs", n: 1 },
+    ]);
+    $("features").innerHTML = table(d.features, [{ h: "Evento", k: "name" }, { h: "Vezes", k: "hits", n: 1 }, { h: "Instalações", k: "installs", n: 1 }]);
+  } catch (e) { $("err").textContent = e.message; $("err").hidden = false; }
+}
+
+async function detail(sig) {
+  const el = $("detail");
+  el.className = "card on"; el.innerHTML = '<div class="muted">Carregando…</div>';
+  el.scrollIntoView({ behavior: "smooth", block: "start" });
+  try {
+    const d = await api(`/api/admin/crash?sig=${encodeURIComponent(sig)}`);
+    const g = d.group;
+    el.innerHTML = `<div class="row" style="justify-content:space-between"><h2 style="margin:0">${esc(g.process)} · ${esc(g.kind)} · <span class="pill ${g.status}">${g.status}</span></h2>
+      <div class="row"><input id="fixedIn" placeholder="corrigido em (ex.: 0.2.2)" value="${esc(g.fixed_in || "")}" style="font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:inherit;width:190px">
+      <button data-s="fixed">Marcar corrigido</button><button data-s="ignored">Ignorar</button><button data-s="open">Reabrir</button><button id="close">Fechar</button></div></div>
+      <p class="title">${esc(g.title)}</p>
+      <div class="grid2"><div>${table(d.byVersion, [{ h: "Versão", k: "app_version" }, { h: "Ocorr.", k: "hits", n: 1 }])}</div>
+      <div>${table(d.byDevice, [{ h: "Aparelho", k: "device_model" }, { h: "API", k: "android_api", n: 1 }, { h: "Ocorr.", k: "hits", n: 1 }])}</div></div>
+      ${d.recent.map((c) => `<h2 style="margin-top:14px">${new Date(c.ts).toLocaleString()} · ${esc(c.app_version)} · ${esc(c.device_model)} (API ${esc(c.android_api)}) · runtime ${esc(c.runtime_version || "—")}</h2>
+        ${c.exception_type || c.message ? `<p class="title">${esc(c.exception_type)} ${esc(c.message)}</p>` : ""}
+        <pre>${esc(c.stack || "(sem pilha)")}</pre>
+        ${c.log_tail ? `<details><summary class="muted">Final do log</summary><pre>${esc(c.log_tail)}</pre></details>` : ""}`).join("")}`;
+    $("close").onclick = () => { el.className = "card"; };
+    el.querySelectorAll("button[data-s]").forEach((b) => b.onclick = async () => {
+      await api("/api/admin/crash", { method: "POST", body: JSON.stringify({ signature: sig, status: b.dataset.s, fixed_in: $("fixedIn").value }) });
+      await load(); detail(sig);
+    });
+  } catch (e) { el.innerHTML = `<div class="bad">${esc(e.message)}</div>`; }
+}
+
+$("reload").onclick = load;
+$("days").onchange = load;
+$("logout").onclick = () => { try { localStorage.removeItem("gmide-admin"); } catch {} load(); };
+load();
+</script>
+</body>
+</html>

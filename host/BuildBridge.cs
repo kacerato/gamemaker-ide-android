@@ -314,18 +314,24 @@ public static partial class BuildBridge
             TryRunTool(argv, cwd, env, r, c.Writer, ref tool, ref code);
             if (tool) return;
             c.IsIgor = !IsWebServerArgs(argv);
+            if (c.IsIgor) BuildTelemetry.Begin(argv, env);
             _clients[c] = 0;
             WatchDisconnect(client, c);
-            code = Dispatch(argv, cwd, env, line => c.Writer.Write('O', line), line => c.Writer.Write('E', line));
+            code = c.IsIgor
+                ? Dispatch(argv, cwd, env, line => { c.Writer.Write('O', line); BuildTelemetry.Line(line); },
+                    line => { c.Writer.Write('E', line); BuildTelemetry.Line(line); })
+                : Dispatch(argv, cwd, env, line => c.Writer.Write('O', line), line => c.Writer.Write('E', line));
         }
         catch (Exception e)
         {
             Logger("BuildBridge: " + e);
             try { c.Writer.Write('E', "[BuildBridge] " + e.Message); } catch { }
             if (code == -1) code = 1;
+            if (c.IsIgor) BuildTelemetry.ToolException(e);
         }
         finally
         {
+            if (c.IsIgor) BuildTelemetry.End(code);
             c.Finished = true;
             _clients.TryRemove(c, out _);
             try { c.Writer.WriteExit(code); } catch { }
@@ -344,6 +350,7 @@ public static partial class BuildBridge
             try { var b = new byte[64]; while (s.Receive(b) > 0) { } } catch { }
             if (c.Finished) return;
             Logger(c.IsIgor ? "Stub do Igor desconectou no meio do build (Stop?)" : "Stub do webserver desconectou");
+            if (c.IsIgor) BuildTelemetry.Cancel();
             if (c.IsIgor) IgorClientAborted?.Invoke();
         }) { IsBackground = true, Name = "BuildBridge.watch" }.Start();
     }
@@ -364,6 +371,7 @@ public static partial class BuildBridge
     {
         if (_clients.IsEmpty) return;
         Logger($"Processo de build encerrando (Environment.Exit {Environment.ExitCode})");
+        BuildTelemetry.End(Environment.ExitCode == 0 ? 1 : Environment.ExitCode, viaExit: true);
         foreach (var c in _clients.Keys)
         {
             c.Finished = true;
@@ -485,6 +493,8 @@ public static partial class BuildBridge
     // Launcher, entao copiamos so essas (o resto do ambiente Android do servico fica).
     static void ApplyEnvironment(IDictionary<string, string> env)
     {
+        Environment.SetEnvironmentVariable("GMIDE_LOCAL_WEB_EXPORT",
+            env.TryGetValue("GMIDE_LOCAL_WEB_EXPORT", out var webExport) ? webExport : null);
         Environment.SetEnvironmentVariable("GMIDE_LOCAL_ANDROID_EXPORT",
             env.TryGetValue("GMIDE_LOCAL_ANDROID_EXPORT", out var localExport) ? localExport : null);
         Environment.SetEnvironmentVariable("GMIDE_ANDROID_EXPORT_OPTIONS",
@@ -544,6 +554,7 @@ public static partial class BuildBridge
         }
         catch (TargetInvocationException e) when (e.InnerException != null)
         {
+            BuildTelemetry.ToolException(e.InnerException);
             stderr(e.InnerException.ToString());
             global::Android.Util.Log.Error("GmIde.Igor", e.InnerException.ToString());
             return 1;

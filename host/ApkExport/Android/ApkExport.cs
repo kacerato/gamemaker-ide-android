@@ -72,7 +72,7 @@ static class ApkExport
     }
 
     /// <summary>O que a sessao precisa do projeto, lido na thread da IDE ao abrir o popup.</summary>
-    sealed record Session(int Id, string ProjectName, string ProjectPath, string SigningPath, bool HasConfiguredKey, string? KeystoreError, AndroidGameCompile.Input Compile, IDisposable Reservation);
+    sealed record Session(int Id, string ProjectName, string ProjectPath, string SigningPath, bool HasConfiguredKey, string? KeystoreError, AndroidGameCompile.Input Compile, AndroidGameCompile.Input WebCompile, IDisposable Reservation);
 
     // ------------------------------------------------------------------ popup
 
@@ -119,6 +119,7 @@ static class ApkExport
         if (project == null) throw new InvalidOperationException("Abra um projeto antes de gerar o APK.");
         string projectName = Prop<string>(project, "name") ?? "jogo";
         var compile = AndroidGameCompile.Prepare();
+        var webCompile = AndroidGameCompile.Prepare("operagx");
         string projectPath = YoYoStudio.Core.Utils.MacroExpansion.Expand("${project_full_filename}");
         // Falha ao ler as Preferencias nao impede o popup: ele abre, mostra o problema e o Gerar
         // devolve o erro (nunca cai na chave padrao, que nao atualizaria o jogo instalado).
@@ -158,9 +159,15 @@ static class ApkExport
             ["icon_store"] = iconStore,
             ["icon_path"] = File.Exists(projectIcon) ? projectIcon : null,
             ["keystore"] = keystoreError != null ? "nao identificado (erro nas Preferencias)" : signingPath,
+            ["targets"] = new JsonObject
+            {
+                ["android"] = new JsonObject { ["display_name"] = game.DisplayName, ["version"] = game.Version, ["package"] = game.Package, ["file_name"] = Path.GetFileName(lastOutput), ["icon_path"] = projectIcon },
+                ["web"] = ReadDesktopOptions(project, "web", projectName, game.Package, last),
+                ["windows"] = ReadDesktopOptions(project, "windows", projectName, game.Package, last),
+            },
         };
 
-        var session = new Session(id, projectName, projectPath, signingPath, !string.IsNullOrWhiteSpace(configuredKey), keystoreError, compile, reservation);
+        var session = new Session(id, projectName, projectPath, signingPath, !string.IsNullOrWhiteSpace(configuredKey), keystoreError, compile, webCompile, reservation);
 
         var ctx = MainApplication.Instance;
         var intent = new Intent();
@@ -194,9 +201,14 @@ static class ApkExport
 
     static void Build(Session s, string json)
     {
+        string? telemetryTarget = null;
+        var total = System.Diagnostics.Stopwatch.StartNew();
         try
         {
             var req = JsonNode.Parse(json)!.AsObject();
+            string target = req["target"]?.GetValue<string>() ?? "android";
+            if (target is not ("android" or "web" or "windows")) throw new ArgumentException("Destino de exportacao invalido.");
+            telemetryTarget = target == "android" ? "apk" : target;
             string displayName = req["display_name"]!.GetValue<string>().Trim();
             string packageName = req["package"]!.GetValue<string>().Trim();
             string version = req["version"]!.GetValue<string>().Trim();
@@ -217,8 +229,8 @@ static class ApkExport
                 icon = snapshot;
                 req["icon_path"] = snapshot;
             }
-            if (s.KeystoreError != null) throw new InvalidOperationException(s.KeystoreError);
-            if (s.HasConfiguredKey) ApkKeystoreSelection.Resolve(s.SigningPath,
+            if (target == "android" && s.KeystoreError != null) throw new InvalidOperationException(s.KeystoreError);
+            if (target == "android" && s.HasConfiguredKey) ApkKeystoreSelection.Resolve(s.SigningPath,
                 () => throw new InvalidOperationException("A chave configurada nao pode ser substituida pela chave padrao."));
 
             // A Game Options so pode ser alterada na thread da IDE, que esta pausada com o popup
@@ -227,27 +239,46 @@ static class ApkExport
             {
                 ["project"] = s.ProjectName, ["project_path"] = s.ProjectPath,
                 ["display_name"] = displayName, ["package"] = packageName, ["version"] = version,
-                ["icon_path"] = icon,
+                ["icon_path"] = icon, ["target"] = target,
+                ["window_width"] = req["window_width"]?.DeepClone(), ["window_height"] = req["window_height"]?.DeepClone(),
             };
             // Diario duravel: se o app fechar antes do proximo evento SDL, Open recupera e salva.
-            SaveLast(s.ProjectName, new JsonObject { ["output"] = output, ["pending_game_options"] = pending.DeepClone() });
+            var settings = LoadLast(s.ProjectName)?.AsObject() ?? new JsonObject();
+            settings["project_path"] = s.ProjectPath;
+            if (target == "android") settings["output"] = output;
+            settings["targets"] ??= new JsonObject();
+            settings["targets"]![target] = req.DeepClone();
+            settings["pending_game_options"] = pending.DeepClone();
+            SaveLast(s.ProjectName, settings);
             Request("apply-options", pending.ToJsonString());
             req["signing_keystore"] = s.SigningPath;
 
-            Status("progress", "Compilando o jogo para Android...");
+            Status("progress", target == "android" ? "Compilando o jogo para Android..." : "Compilando o jogo para WebAssembly...");
             var sw = System.Diagnostics.Stopwatch.StartNew();
-            AndroidGameCompile.Run(s.Compile, req.ToJsonString(), line => Status("progress", line));
+            string? preview = null;
+            if (target == "android") AndroidGameCompile.Run(s.Compile, req.ToJsonString(), line => Status("progress", line));
+            else preview = WebGameCompile.Run(s.WebCompile, req.ToJsonString(), line => Status("progress", line));
             Log.Info(Tag, $"APK pronto em {sw.Elapsed.TotalSeconds:F1} s: {output}");
+            Telemetry.Build(telemetryTarget, "ok", sw.ElapsedMilliseconds, 0);
+            Telemetry.Event("export." + telemetryTarget, new() { ["ok"] = true, ["bytes"] = new FileInfo(output).Length, ["ms"] = sw.ElapsedMilliseconds });
             Status("done", output, new JsonObject
             {
                 ["size"] = new FileInfo(output).Length,
                 ["seconds"] = Math.Round(sw.Elapsed.TotalSeconds, 1),
                 ["package"] = packageName,
+                ["target"] = target, ["preview"] = preview,
             });
         }
         catch (Exception e)
         {
             Log.Error(Tag, "Gerar APK: " + e);
+            if (telemetryTarget != null)
+            {
+                // Erro de validacao do formulario nao e falha do exportador.
+                bool userInput = e is ArgumentException or FileNotFoundException;
+                Telemetry.Build(telemetryTarget, userInput ? "cancelled" : "failed", total.ElapsedMilliseconds, null,
+                    e.GetType().FullName + ": " + e.Message + (userInput ? "" : "\n" + e.StackTrace));
+            }
             Status("error", e.Message);
         }
     }
@@ -294,6 +325,39 @@ static class ApkExport
 
     const string ProjectNameMacro = "${project_name}";
 
+    static JsonObject ReadDesktopOptions(object project, string target, string projectName, string id, JsonNode? last)
+    {
+        var options = AndroidGameOptions.GetPlatform(project, target == "web" ? "GMOperaGXOptions" : "GMWindowsOptions");
+        string name = Prop<string>(options, target == "web" ? "option_operagx_game_name" : "option_windows_display_name") ?? projectName;
+        string version = Prop<string>(options, target == "web" ? "option_operagx_version" : "option_windows_version") ?? "1.0.0.0";
+        var saved = last?["targets"]?[target];
+        string projectFile = YoYoStudio.Core.Utils.MacroExpansion.Expand("${project_full_filename}");
+        if (last?["project_path"]?.GetValue<string>() != projectFile) saved = null;
+        var authored = ProjectExportSettings.Read(YoYoStudio.Core.Utils.MacroExpansion.Expand("${project_full_filename}"), target);
+        string? nativeIcon = target == "windows" ? Prop<string>(options, "option_windows_icon") : null;
+        if (!string.IsNullOrEmpty(nativeIcon)) nativeIcon = YoYoStudio.Core.Utils.MacroExpansion.Expand(nativeIcon);
+        string? selectedIcon = File.Exists(nativeIcon) ? nativeIcon : authored["icon_path"]?.GetValue<string>() ?? saved?["icon_path"]?.GetValue<string>();
+        if (File.Exists(selectedIcon))
+        {
+            string png = Path.Combine(Path.GetDirectoryName(IconStorePath(projectName))!,
+                Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(YoYoStudio.Core.Utils.MacroExpansion.Expand("${project_full_filename}")))) + "-" + target + ".png");
+            Directory.CreateDirectory(Path.GetDirectoryName(png)!);
+            File.WriteAllBytes(png, ApkBuilder.RenderIconPng(selectedIcon!, 256));
+            selectedIcon = png;
+        }
+        string? output = saved?["output"]?.GetValue<string>();
+        return new JsonObject
+        {
+            ["display_name"] = string.IsNullOrWhiteSpace(name) ? projectName : name.Replace(ProjectNameMacro, projectName),
+            ["version"] = string.IsNullOrWhiteSpace(version) ? "1.0.0.0" : version,
+            ["package"] = authored["package"]?.GetValue<string>() ?? saved?["package"]?.GetValue<string>() ?? ProjectExportSettings.DefaultId(projectFile, projectName),
+            ["file_name"] = output == null ? SafeFileName(projectName) + "-" + target + ".zip" : Path.GetFileName(output),
+            ["icon_path"] = selectedIcon,
+            ["window_width"] = authored["window_width"]?.GetValue<int>() ?? saved?["window_width"]?.GetValue<int>() ?? 1280,
+            ["window_height"] = authored["window_height"]?.GetValue<int>() ?? saved?["window_height"]?.GetValue<int>() ?? 720,
+        };
+    }
+
     /// <summary>Valores Android da Game Options como o popup mostra (macro do nome resolvida).</summary>
     static GameOptionValues ReadGameOptions(object? opts, string projectName)
     {
@@ -321,6 +385,25 @@ static class ApkExport
             !string.Equals(currentPath, req["project_path"]?.GetValue<string>(), StringComparison.Ordinal))
         {
             Log.Warn(Tag, "Game Options Android nao atualizada: o projeto aberto mudou");
+            return;
+        }
+        if (req["target"]?.GetValue<string>() is "web" or "windows")
+        {
+            string target = req["target"]!.GetValue<string>();
+            var options = AndroidGameOptions.GetPlatform(project, target == "web" ? "GMOperaGXOptions" : "GMWindowsOptions", create: true)!;
+            options.GetType().GetProperty(target == "web" ? "option_operagx_game_name" : "option_windows_display_name", Any)!
+                .SetValue(options, req["display_name"]!.GetValue<string>());
+            options.GetType().GetProperty(target == "web" ? "option_operagx_version" : "option_windows_version", Any)!
+                .SetValue(options, req["version"]!.GetValue<string>());
+            byte[]? png = req["icon_path"]?.GetValue<string>() is { Length: > 0 } source ? ApkBuilder.RenderIconPng(source, 256) : null;
+            ProjectExportSettings.Save(currentPath, target, req, png);
+            if (target == "windows" && png != null) options.GetType().GetProperty("option_windows_icon", Any)!
+                .SetValue(options, "${project_dir}/options/gmide-export/windows-icon.ico");
+            if (save) YoYoStudio.IDE.SaveProjectIncremental((success, error) =>
+            {
+                if (success) ClearPendingOptions(projectName!, json);
+                else Toast("Nao foi possivel salvar Game Options: " + error?.Message);
+            });
             return;
         }
         opts ??= AndroidGameOptions.Get(project, create: true)!;

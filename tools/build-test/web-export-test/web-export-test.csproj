@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><RollForward>Major</RollForward>
+    <AssemblyName>GmIde.Android</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../host/ApkExport/WebExportPackage.cs" Link="WebExportPackage.cs" />
+    <Compile Include="../../../host/ApkExport/WindowsWebPackage.cs" Link="WindowsWebPackage.cs" />
+    <Compile Include="../../../host/ApkExport/WindowsPlayerResources.cs" Link="WindowsPlayerResources.cs" />
+    <Compile Include="../../../host/ApkExport/ProjectExportSettings.cs" Link="ProjectExportSettings.cs" />
+    <Compile Include="../../../host/ApkExport/IcoImage.cs" Link="IcoImage.cs" />
+    <Compile Include="../../../host/IgorPatches.cs" Link="IgorPatches.cs" />
+    <Compile Include="../../../host/AssemblyScanPatches.cs" Link="AssemblyScanPatches.cs" />
+    <PackageReference Include="Mono.Cecil" Version="0.11.6" />
+  </ItemGroup>
+</Project>

@@ -179,15 +179,12 @@ static class ApkBuilder
             : p.Contains("hdpi", StringComparison.Ordinal) ? 72
             : p.Contains("ldpi", StringComparison.Ordinal) ? 36 : 48;
         int size = adaptive ? dp * 9 / 4 : dp;
-        var bounds = new global::Android.Graphics.BitmapFactory.Options { InJustDecodeBounds = true };
-        global::Android.Graphics.BitmapFactory.DecodeFile(source, bounds)?.Recycle();
-        int max = Math.Max(bounds.OutWidth, bounds.OutHeight);
-        if (max <= 0) throw new InvalidDataException("A imagem escolhida nao e um arquivo de imagem valido.");
-        int sample = 1;
-        while (max / (sample * 2) >= Math.Max(size, 432)) sample *= 2;
-        using var opts = new global::Android.Graphics.BitmapFactory.Options { InSampleSize = sample, InPreferredConfig = global::Android.Graphics.Bitmap.Config.Argb8888 };
-        using var decoded = global::Android.Graphics.BitmapFactory.DecodeFile(source, opts)
-            ?? throw new InvalidDataException("Nao consegui abrir a imagem do icone.");
+        return RenderIconPng(source, size, adaptive);
+    }
+
+    internal static byte[] RenderIconPng(string source, int size, bool adaptive = false)
+    {
+        using var decoded = LoadIconBitmap(source, Math.Max(size, 432));
         using var output = global::Android.Graphics.Bitmap.CreateBitmap(size, size, global::Android.Graphics.Bitmap.Config.Argb8888!);
         using (var canvas = new global::Android.Graphics.Canvas(output))
         {
@@ -196,16 +193,33 @@ static class ApkBuilder
             var dst = new global::Android.Graphics.RectF(inset, inset, size - inset, size - inset);
             int side = Math.Min(decoded.Width, decoded.Height);
             int left = (decoded.Width - side) / 2, top = (decoded.Height - side) / 2;
-            var src = new global::Android.Graphics.Rect(left, top, left + side, top + side);
-            var paint = new global::Android.Graphics.Paint(global::Android.Graphics.PaintFlags.FilterBitmap | global::Android.Graphics.PaintFlags.AntiAlias);
+            using var src = new global::Android.Graphics.Rect(left, top, left + side, top + side);
+            using var paint = new global::Android.Graphics.Paint(global::Android.Graphics.PaintFlags.FilterBitmap | global::Android.Graphics.PaintFlags.AntiAlias);
             canvas.DrawBitmap(decoded, src, dst, paint);
-            src.Dispose();
-            paint.Dispose();
         }
         using var stream = new MemoryStream();
         if (!output.Compress(global::Android.Graphics.Bitmap.CompressFormat.Png!, 100, stream))
             throw new IOException("Nao consegui converter a imagem para PNG.");
         return stream.ToArray();
+    }
+
+    static global::Android.Graphics.Bitmap LoadIconBitmap(string source, int minimumSize)
+    {
+        if (IcoImage.Read(source) is { } ico)
+        {
+            if (ico.Png != null) return global::Android.Graphics.BitmapFactory.DecodeByteArray(ico.Png, 0, ico.Png.Length)
+                ?? throw new InvalidDataException("PNG do icone ICO invalido.");
+            return global::Android.Graphics.Bitmap.CreateBitmap(ico.Pixels!, ico.Width, ico.Height, global::Android.Graphics.Bitmap.Config.Argb8888!);
+        }
+        var bounds = new global::Android.Graphics.BitmapFactory.Options { InJustDecodeBounds = true };
+        global::Android.Graphics.BitmapFactory.DecodeFile(source, bounds)?.Recycle();
+        int max = Math.Max(bounds.OutWidth, bounds.OutHeight);
+        if (max <= 0) throw new InvalidDataException("A imagem escolhida nao e um arquivo de imagem valido.");
+        int sample = 1;
+        while (max / (sample * 2) >= minimumSize) sample *= 2;
+        using var opts = new global::Android.Graphics.BitmapFactory.Options { InSampleSize = sample, InPreferredConfig = global::Android.Graphics.Bitmap.Config.Argb8888 };
+        return global::Android.Graphics.BitmapFactory.DecodeFile(source, opts)
+            ?? throw new InvalidDataException("Nao consegui abrir a imagem do icone.");
     }
 
     static bool IsSignatureFile(string n) =>

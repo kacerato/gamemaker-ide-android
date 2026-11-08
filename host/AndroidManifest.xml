@@ -14,6 +14,11 @@
                android:hardwareAccelerated="true"
                android:largeHeap="true"
                android:extractNativeLibs="true">
+    <provider android:name="androidx.core.content.FileProvider"
+              android:authorities="io.gmide.android.exports"
+              android:exported="false" android:grantUriPermissions="true">
+      <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/export_paths" />
+    </provider>
     <activity android:name="io.gmide.GmIdeActivity"
               android:exported="true"
               android:label="GM IDE Android"

@@ -17,6 +17,8 @@ public class MainApplication : Application
         base.OnCreate();
         Instance = this;
         string processName = File.ReadAllText("/proc/self/cmdline").TrimEnd('\0');
+        // Antes de tudo: crash em qualquer etapa seguinte ja fica registrado (docs/telemetria.md).
+        Telemetry.Init(this, processName);
         if (processName.EndsWith(":game", StringComparison.Ordinal))
         {
             IntPtr cls = JNIEnv.FindClass("com/yoyogames/runner/RunnerJNILib");

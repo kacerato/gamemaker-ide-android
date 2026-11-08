@@ -63,6 +63,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <AndroidAsset Include="..\tools\windows-player\out\GmGame.exe;..\tools\windows-player\out\WebView2Loader.dll;..\tools\windows-player\out\WebView2-LICENSE.txt" Link="Assets\windows-player\%(Filename)%(Extension)" />
     <!-- "Gerar APK": modelo do runner Android compilado no PC (tools/apk-template/make-template.py) -->
     <AndroidAsset Include="..\tools\apk-template\out\gmide-runner-template-slim.apk" Link="Assets\apk-template\template.apk" />
     <AndroidAsset Include="..\tools\apk-template\out\template.json" Link="Assets\apk-template\template.json" />
@@ -80,6 +81,7 @@
   </ItemGroup>
   <Import Project="framework-roots.props" />
   <Target Name="RequireBundledIdePackage" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(MSBuildThisFileDirectory)..\tools\windows-player\out\GmGame.exe')" Text="Player Windows ausente. Execute tools/windows-player/build.ps1." />
     <Error Condition="!Exists('$(GmPackage)')" Text="Pacote da IDE ausente: $(GmPackage). Gere-o com tools/make-package.sh ou informe -p:GmPackage=caminho\gmide-package.zip." />
   </Target>
 </Project>

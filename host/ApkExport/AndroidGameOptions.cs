@@ -9,9 +9,12 @@ internal static class AndroidGameOptions
     const BindingFlags Any = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static;
 
     internal static object? Get(object project, bool create = false)
+        => GetPlatform(project, "GMAndroidOptions", create);
+
+    internal static object? GetPlatform(object project, string typeName, bool create = false)
     {
         var assembly = project.GetType().Assembly;
-        var optionType = assembly.GetType("YoYoStudio.Resources.GMAndroidOptions", true)!;
+        var optionType = assembly.GetType("YoYoStudio.Resources." + typeName, true)!;
         var options = (IEnumerable)(project.GetType().GetField("Options", Any)?.GetValue(project)
             ?? project.GetType().GetProperty("Options", Any)?.GetValue(project)
             ?? throw new MissingMemberException("GMProject.Options"));

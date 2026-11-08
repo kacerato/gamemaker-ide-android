@@ -31,6 +31,7 @@ public class BuildService : Service
                 Log.Error(Tag, "BuildService: configuracao ausente (a IDE nao chamou BuildIntegration.Configure)");
                 return;
             }
+            Telemetry.SetRuntimeDir(cfg.RuntimeDir);
             BuildBridge.IgorClientAborted += KillSelf;
             BuildBridge.OpenUrlRequested += OpenRunner;
             BuildBridge.ConfigureInBackground(cfg.RuntimeDir, cfg.StubPath, cfg.CacheDir);
@@ -53,6 +54,7 @@ public class BuildService : Service
             // O jogo foi fechado no WebView: termina o "OperaGX Run" (Igor esperando o webserver)
             // como sucesso e recomeca o processo limpo.
             Log.Info(Tag, "Run encerrado pelo WebView");
+            BuildTelemetry.End(0);
             BuildBridge.AbortAll(0, "");
             new Thread(() => { Thread.Sleep(300); KillSelf(); }) { IsBackground = true }.Start();
         }
@@ -69,6 +71,7 @@ public class BuildService : Service
     // "Attempting to open browser ... with URL "http://localhost:<porta>/runner.html"" do Igor.
     void OpenRunner(string url)
     {
+        BuildTelemetry.CompileDone();
         new Thread(() =>
         {
             try

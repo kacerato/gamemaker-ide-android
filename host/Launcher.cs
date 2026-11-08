@@ -76,7 +76,10 @@ public static class Launcher
         // Primeira abertura: instala do proprio APK, sem download ou ZIP manual.
         if (!File.Exists(Path.Combine(_ideDir, "IDE.dll")))
         {
-            if (!PackageImport.TryInstall(_ideDir) && PackageImport.HasBundledPackage)
+            var install = System.Diagnostics.Stopwatch.StartNew();
+            bool installed = PackageImport.TryInstall(_ideDir);
+            Telemetry.Event("ide.install", new() { ["ok"] = installed, ["ms"] = install.ElapsedMilliseconds });
+            if (!installed && PackageImport.HasBundledPackage)
                 return 2; // Erro ja exibido; nao pede uma pasta do adb no APK completo.
         }
         LogMirror.Start();
@@ -188,8 +191,11 @@ public static class Launcher
         SelfTestLayoutXml();
 
         Log.Info(Tag, "Entrando no loop principal (IDE.Execute)");
+        Telemetry.Booted();
         bool ok = YoYoStudio.IDE.Execute(_ideArgs, mouse);
         Log.Info(Tag, "IDE.Execute terminou: " + ok);
+        Telemetry.EndSession(PlatformBridge.RestartRequested ? "restart" : "normal");
+        TelemetryUploader.Flush();
         if (PlatformBridge.RestartRequested)
         {
             // A IDE pediu para reiniciar (SpawnNewIDE): o estado estatico dela nao se recria no mesmo

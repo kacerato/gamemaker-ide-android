@@ -27,8 +27,6 @@ public static class Telemetry
     static string? _sessionId;
     static readonly object _writeLock = new();
     static Exception? _lastCrash;
-    static int _consent = -2;            // -2 nao lido; -1 sem resposta; 0 nao; 1 sim
-    static long _consentReadAt;
 
     public static string Dir => _dir;
     public static string ProcessKind => _process;
@@ -84,16 +82,12 @@ public static class Telemetry
     {
         get
         {
-            long now = System.Environment.TickCount64;
-            if (_consent != -2 && now - _consentReadAt < 10000) return _consent;
-            _consentReadAt = now;
             try
             {
                 var f = Path.Combine(_dir, "consent");
-                _consent = !File.Exists(f) ? -1 : File.ReadAllText(f).Trim() == "1" ? 1 : 0;
+                return !File.Exists(f) ? -1 : File.ReadAllText(f).Trim() == "1" ? 1 : 0;
             }
-            catch { _consent = -1; }
-            return _consent;
+            catch { return -1; }
         }
     }
 

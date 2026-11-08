@@ -98,11 +98,12 @@ static class TelemetryUploader
         {
             foreach (var line in File.ReadLines(s))
             {
-                if (line.Length == 0 || line.Length > MaxBatchBytes) continue;
+                int lineBytes = Encoding.UTF8.GetByteCount(line) + 1;
+                if (line.Length == 0 || lineBytes > MaxBatchBytes) continue;
                 try { using var _ = JsonDocument.Parse(line); } catch { continue; } // linha cortada
-                if (items.Count >= MaxItems || bytes + line.Length > MaxBatchBytes) { WriteBatch(items); items.Clear(); bytes = 0; }
+                if (items.Count >= MaxItems || bytes + lineBytes > MaxBatchBytes) { WriteBatch(items); items.Clear(); bytes = 0; }
                 items.Add(line);
-                bytes += line.Length + 1;
+                bytes += lineBytes;
             }
         }
         if (items.Count > 0) WriteBatch(items);
@@ -125,6 +126,7 @@ static class TelemetryUploader
 
     static bool Send(HttpClient http, string file)
     {
+        if (Telemetry.Consent != 1) return false;
         var raw = File.ReadAllBytes(file);
         using var ms = new MemoryStream();
         using (var gz = new GZipStream(ms, CompressionLevel.Optimal, leaveOpen: true)) gz.Write(raw);

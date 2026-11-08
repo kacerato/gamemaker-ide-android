@@ -50,7 +50,7 @@ public final class TelemetryConsent {
         if (a.isFinishing() || state(a) != -1) return;
         new AlertDialog.Builder(a, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setTitle("Ajudar a melhorar o GM IDE?")
-            .setMessage("Enviar dados anônimos de uso e de falhas: versão do app e do runtime, modelo do aparelho, "
+            .setMessage("Enviar dados de uso e de falhas com um identificador aleatório: versão do app e do runtime, modelo do aparelho, "
                 + "resultado e duração dos builds e o texto dos erros e crashes, com os caminhos de arquivo removidos.\n\n"
                 + "Não enviamos seus projetos, código GML nem dados de conta. Dá para mudar depois no menu ⋯ "
                 + "da barra de atalhos.")

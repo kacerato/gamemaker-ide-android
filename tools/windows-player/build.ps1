@@ -11,8 +11,9 @@ if (!(Test-Path (Join-Path $sdk 'build/native/include/WebView2.h'))) {
 }
 $out = Join-Path $root 'out'
 New-Item -ItemType Directory -Path $out -Force | Out-Null
-& $Cxx (Join-Path $root 'player.cpp') '-I' (Join-Path $sdk 'build/native/include') '-std=c++17' '-O2' '-s' '-municode' '-mwindows' '-static' '-static-libgcc' '-static-libstdc++' '-lole32' '-lshell32' '-luuid' '-lgdi32' '-o' (Join-Path $out 'GmGame.exe')
+& $Cxx (Join-Path $root 'player.cpp') (Join-Path $root 'bundle.cpp') (Join-Path $root 'vendor/miniz/miniz_tinfl.c') '-DMINIZ_NO_ARCHIVE_APIS' '-DMINIZ_NO_DEFLATE_APIS' '-I' (Join-Path $sdk 'build/native/include') '-std=c++17' '-O2' '-s' '-municode' '-mwindows' '-static' '-static-libgcc' '-static-libstdc++' '-lole32' '-lshell32' '-luuid' '-lgdi32' '-lbcrypt' '-o' (Join-Path $out 'GmGame.exe')
 if ($LASTEXITCODE -ne 0) { throw 'Falha ao compilar o player Windows.' }
 Copy-Item -LiteralPath (Join-Path $sdk 'build/native/x64/WebView2Loader.dll') -Destination $out
 Copy-Item -LiteralPath (Join-Path $sdk 'LICENSE.txt') -Destination (Join-Path $out 'WebView2-LICENSE.txt')
+Copy-Item -LiteralPath (Join-Path $root 'vendor/miniz/LICENSE') -Destination (Join-Path $out 'miniz-LICENSE.txt')
 Get-FileHash (Join-Path $out 'GmGame.exe'), (Join-Path $out 'WebView2Loader.dll') | Format-Table -AutoSize

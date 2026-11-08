@@ -9,8 +9,9 @@
 #include <string>
 #include <algorithm>
 #include "WebView2.h"
+#include "bundle.h"
 
-// A precompiled desktop player. Android only supplies game.ini, icon and web files.
+// A precompiled desktop player. Android appends the compressed game bundle.
 // No server, browser window, editor process or SDK is required alongside the game.
 static HWND windowHandle;
 static ICoreWebView2Controller* controller;
@@ -172,6 +173,14 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
     SetProcessDPIAware();
     wchar_t executable[32768]; GetModuleFileNameW(nullptr, executable, 32768);
     directory = executable; directory.resize(directory.find_last_of(L"\\/"));
+    try {
+        auto bundled = OpenGameBundle(executable);
+        if (!bundled.empty()) directory = bundled;
+    } catch (const std::exception& e) {
+        std::string detail = e.what();
+        auto message = L"Nao foi possivel preparar o jogo.\n\n" + std::wstring(detail.begin(), detail.end());
+        MessageBoxW(nullptr, message.c_str(), L"Game", MB_OK | MB_ICONERROR); return 1;
+    }
     title = Option(L"title", L"Game");
     std::wstring id = Option(L"id", L"game");
     if (id.empty() || id.find_first_not_of(L"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-") != std::wstring::npos || id == L"." || id == L"..") {

@@ -22,7 +22,7 @@ internal static class WindowsWebPackage
         string exeName = new string(title.Select(c => c < 32 || "<>:\"/\\|?*".Contains(c) ? '_' : c).ToArray()).TrimEnd(' ', '.');
         // Avoid reserved DOS names even when a game's title is CON, AUX, etc.
         if (exeName.Length == 0 || Regex.IsMatch(exeName, @"^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)", RegexOptions.IgnoreCase)) exeName = "Game";
-        foreach (string file in new[] { "GmGame.exe", "WebView2Loader.dll", "WebView2-LICENSE.txt" })
+        foreach (string file in new[] { "GmGame.exe", "WebView2Loader.dll", "WebView2-LICENSE.txt", "miniz-LICENSE.txt" })
         {
             string source = Path.Combine(playerFolder, file);
             if (!File.Exists(source)) throw new FileNotFoundException("Modelo Windows incompleto: " + file);
@@ -35,7 +35,7 @@ internal static class WindowsWebPackage
             File.WriteAllBytes(Path.Combine(folder, "game.ico"), IconFile(iconPng));
         }
         File.WriteAllText(Path.Combine(folder, "LEIA-ME.txt"),
-            "Extraia todo o ZIP e abra " + exeName + ".exe.\r\n\r\n" +
+            "Abra o EXE exportado. Os arquivos do jogo estao embutidos e sao preparados automaticamente.\r\n\r\n" +
             "Windows x64, Microsoft Edge WebView2 Runtime. Nao exige .NET, IDE ou servidor.\r\n" +
             "Se o WebView2 estiver ausente, o player oferece abrir o site oficial da Microsoft.\r\n" +
             "F11: tela cheia. Fechar a janela encerra o jogo.\r\n" +

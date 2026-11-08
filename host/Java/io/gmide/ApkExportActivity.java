@@ -475,12 +475,12 @@ public class ApkExportActivity extends Activity {
         state = FORM;
         setBody(formView);
         String ks = new File(initial.optString("keystore", "gmide-release.p12")).getName();
-        footerNote.setText(target.equals("android") ? "Assinatura: " + ks : target.equals("web") ? "WebAssembly · pronto para hospedagem web" : "Windows x64 · requer WebView2 · ZIP com EXE");
+        footerNote.setText(target.equals("android") ? "Assinatura: " + ks : target.equals("web") ? "WebAssembly · pronto para hospedagem web" : "EXE único · Windows x64 · requer WebView2");
         secondaryBtn.setText("Cancelar");
         secondaryBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { finish(); }
         });
-        primaryBtn.setText(target.equals("android") ? "Gerar APK" : "Gerar ZIP");
+        primaryBtn.setText(target.equals("android") ? "Gerar APK" : target.equals("windows") ? "Gerar EXE" : "Gerar ZIP");
         primaryBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) { submit(); }
         });
@@ -554,9 +554,9 @@ public class ApkExportActivity extends Activity {
             texts.addView(p);
             TextView pk = text("Pacote " + j.optString("package", ""), 12, C_DIM, regular);
             texts.addView(pk);
-            footerNote.setText(target.equals("android") ? "Para atualizar, use sempre a mesma assinatura." : target.equals("windows") ? "Extraia o ZIP no Windows e abra o EXE." : "Hospede o ZIP extraído para jogar no navegador.");
+            footerNote.setText(target.equals("android") ? "Para atualizar, use sempre a mesma assinatura." : target.equals("windows") ? "Envie somente este EXE e abra no Windows com WebView2." : "Hospede o ZIP extraído para jogar no navegador.");
             secondaryBtn.setVisibility(View.VISIBLE);
-            secondaryBtn.setText(target.equals("android") ? "Fechar" : "Compartilhar ZIP");
+            secondaryBtn.setText(target.equals("android") ? "Fechar" : target.equals("windows") ? "Compartilhar EXE" : "Compartilhar ZIP");
             secondaryBtn.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) { if (target.equals("android")) finish(); else share(); }
             });
@@ -650,7 +650,7 @@ public class ApkExportActivity extends Activity {
         return new File(dir, f);
     }
 
-    String extension() { return target.equals("android") ? ".apk" : ".zip"; }
+    String extension() { return target.equals("android") ? ".apk" : target.equals("windows") ? ".exe" : ".zip"; }
 
     static String shortDir(String dir) {
         String root = "/storage/emulated/0/";
@@ -702,7 +702,7 @@ public class ApkExportActivity extends Activity {
             Uri uri = (Uri) Class.forName("androidx.core.content.FileProvider")
                     .getMethod("getUriForFile", Context.class, String.class, File.class)
                     .invoke(null, this, getPackageName() + ".exports", new File(resultPath));
-            Intent i = new Intent(Intent.ACTION_SEND); i.setType("application/zip");
+            Intent i = new Intent(Intent.ACTION_SEND); i.setType(target.equals("windows") ? "application/vnd.microsoft.portable-executable" : "application/zip");
             i.putExtra(Intent.EXTRA_STREAM, uri); i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(Intent.createChooser(i, "Compartilhar jogo"));
         } catch (Exception e) { toast("Não foi possível compartilhar: " + e.getMessage()); }

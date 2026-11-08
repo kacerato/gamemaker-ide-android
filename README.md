@@ -67,8 +67,9 @@ Os geradores de template/runner dependem do runtime GameMaker 2026.0.0.23.
 - [Auditoria do port](docs/auditoria-port.md).
 - [Cenário Fazendinha](docs/teste-fazendinha.md).
 
-O exportador oferece APK Android VM, ZIP WebAssembly e ZIP Windows x64 com EXE
-baseado em WebView2. YYC, AAB e Windows VM nativo não são suportados.
+O exportador oferece APK Android VM, ZIP WebAssembly e um único EXE Windows x64
+baseado em WebView2, com extração automática dos arquivos embutidos. YYC, AAB e
+Windows VM nativo não são suportados.
 Extensões Java/Kotlin precisam estar integradas ao modelo do runner.
 As validações em aparelhos descritas nos documentos são históricas e não
 equivalem à aceitação de cada novo APK; confira as notas do release.

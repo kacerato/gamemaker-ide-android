@@ -60,7 +60,7 @@ internal static class WebGameCompile
             {
                 progress("Montando o pacote Windows x64...");
                 string player = Path.Combine(job.Root, "player"); Directory.CreateDirectory(player);
-                foreach (string file in new[] { "GmGame.exe", "WebView2Loader.dll", "WebView2-LICENSE.txt" })
+                foreach (string file in new[] { "GmGame.exe", "WebView2Loader.dll", "WebView2-LICENSE.txt", "miniz-LICENSE.txt" })
                 {
                     using var source = ctx.Assets!.Open("windows-player/" + file);
                     using var dest = File.Create(Path.Combine(player, file)); source.CopyTo(dest);
@@ -69,7 +69,8 @@ internal static class WebGameCompile
                     choices["window_width"]?.GetValue<int>() ?? 1280, choices["window_height"]?.GetValue<int>() ?? 720);
             }
             progress("Salvando em Downloads...");
-            WebExportPackage.Publish(folder, output);
+            if (target == "windows") WindowsSingleFilePackage.Publish(folder, output);
+            else WebExportPackage.Publish(folder, output);
             // Preview uses the exact, personalized files in the exported archive, never a stale Run cache.
             // One stable folder per storage identifier; repeated exports replace the previous preview.
             string preview = Path.Combine(ctx.FilesDir!.AbsolutePath, "export-previews", Convert.ToHexString(

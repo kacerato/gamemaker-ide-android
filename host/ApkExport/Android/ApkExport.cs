@@ -351,7 +351,8 @@ static class ApkExport
             ["display_name"] = string.IsNullOrWhiteSpace(name) ? projectName : name.Replace(ProjectNameMacro, projectName),
             ["version"] = string.IsNullOrWhiteSpace(version) ? "1.0.0.0" : version,
             ["package"] = authored["package"]?.GetValue<string>() ?? saved?["package"]?.GetValue<string>() ?? ProjectExportSettings.DefaultId(projectFile, projectName),
-            ["file_name"] = output == null ? SafeFileName(projectName) + "-" + target + ".zip" : Path.GetFileName(output),
+            ["file_name"] = output == null ? SafeFileName(projectName) + "-" + target + (target == "windows" ? ".exe" : ".zip")
+                : Path.ChangeExtension(Path.GetFileName(output), target == "windows" ? ".exe" : ".zip"),
             ["icon_path"] = selectedIcon,
             ["window_width"] = authored["window_width"]?.GetValue<int>() ?? saved?["window_width"]?.GetValue<int>() ?? 1280,
             ["window_height"] = authored["window_height"]?.GetValue<int>() ?? saved?["window_height"]?.GetValue<int>() ?? 720,

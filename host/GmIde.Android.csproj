@@ -10,8 +10,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationId>io.gmide.android</ApplicationId>
-    <ApplicationVersion>4</ApplicationVersion>
-    <ApplicationDisplayVersion>0.2.2</ApplicationDisplayVersion>
+    <ApplicationVersion>5</ApplicationVersion>
+    <ApplicationDisplayVersion>0.2.3</ApplicationDisplayVersion>
     <RuntimeIdentifier>android-arm64</RuntimeIdentifier>
     <EnableDefaultAndroidItems>false</EnableDefaultAndroidItems>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
@@ -63,7 +63,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AndroidAsset Include="..\tools\windows-player\out\GmGame.exe;..\tools\windows-player\out\WebView2Loader.dll;..\tools\windows-player\out\WebView2-LICENSE.txt" Link="Assets\windows-player\%(Filename)%(Extension)" />
+    <AndroidAsset Include="..\tools\windows-player\out\GmGame.exe;..\tools\windows-player\out\WebView2Loader.dll;..\tools\windows-player\out\WebView2-LICENSE.txt;..\tools\windows-player\out\miniz-LICENSE.txt" Link="Assets\windows-player\%(Filename)%(Extension)" />
     <!-- "Gerar APK": modelo do runner Android compilado no PC (tools/apk-template/make-template.py) -->
     <AndroidAsset Include="..\tools\apk-template\out\gmide-runner-template-slim.apk" Link="Assets\apk-template\template.apk" />
     <AndroidAsset Include="..\tools\apk-template\out\template.json" Link="Assets\apk-template\template.json" />

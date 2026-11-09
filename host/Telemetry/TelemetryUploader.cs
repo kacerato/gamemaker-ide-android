@@ -120,7 +120,7 @@ static class TelemetryUploader
           .Append((_device ?? new JsonObject()).ToJsonString()).Append(",\"items\":[")
           .Append(string.Join(",", items)).Append("]}");
         var tmp = Path.Combine(Telemetry.Dir, $"b-{id}.tmp");
-        File.WriteAllText(tmp, sb.ToString(), Encoding.UTF8);
+        File.WriteAllText(tmp, sb.ToString(), Telemetry.Utf8NoBom);
         File.Move(tmp, Path.ChangeExtension(tmp, ".json"));
     }
 

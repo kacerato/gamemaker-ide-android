@@ -67,6 +67,33 @@ após falhas (até 1 h), e no fim normal da IDE.
 
 A fila local tem teto de 2 MB, e os arquivos mais antigos saem primeiro.
 
+Os arquivos da fila e os lotes são UTF-8 **sem BOM** (`Telemetry.Utf8NoBom`). Não use
+`Encoding.UTF8` em `File.WriteAllText`/`AppendAllText`: ele grava `EF BB BF` no início do arquivo.
+
+### Lotes recusados com 400 `{"error":"json"}` (até a 0.2.2)
+
+Na 0.2.2 o `TelemetryUploader.WriteBatch` gravava `b-*.json` com `Encoding.UTF8`, que põe o BOM
+no início do arquivo. O servidor descomprimia, chamava `buf.toString("utf8")` (que não remove o BOM)
+e o `JSON.parse` falhava no `U+FEFF`: `400 {"error":"json"}` (`lib/http.js`). Como 4xx é definitivo,
+o app apagava o lote. Até 08/11/2026 o `gmide.batches` só tinha lotes de smoke-test e de validação
+sintética (mandados sem BOM), nenhum vindo de um aparelho. Acentos, emoji e caracteres de
+controle nas mensagens de crash não tinham relação com o erro.
+
+Correção nos dois lados: o app grava sem BOM, e o `readJson` do servidor descarta um BOM inicial,
+para que as instalações 0.2.2 voltem a enviar sem atualizar o app. `test/ingest.test.js` cobre
+o caso (lote com BOM, gzip, valores de smoke-test, banco trocado por um dublê).
+
+Para conferir o servidor publicado sem gravar nada, mande um lote com schema inválido. Ele é
+recusado antes de acessar o banco, e a resposta mostra se o parse passou:
+
+```sh
+B='{"schema":"gmide.telemetry/smoke-invalido","batch_id":"00000000-0000-4000-8000-000000000001","install_id":"00000000-0000-4000-8000-000000000002","app":{"version":"0.0.0-smoke"},"device":{"model":"smoke-test"},"items":[]}'
+{ printf '\xef\xbb\xbf'; printf '%s' "$B"; } | gzip -c > bom.gz
+curl -s -X POST https://gmide-telemetry.vercel.app/api/v1/ingest -H 'content-type: application/json' \
+  -H 'content-encoding: gzip' --data-binary @bom.gz
+# servidor antigo: {"error":"json"}   servidor corrigido: {"error":"schema"}
+```
+
 ## Formato (`gmide.telemetry/1`)
 
 ```json
@@ -113,7 +140,7 @@ O schema está em `telemetry/server/schema.sql`, que é idempotente.
 
 ```sh
 cd telemetry/server
-npm test                      # validacao do lote e assinatura de crash (node --test)
+npm test                      # validacao do lote, assinatura de crash e rota de ingestao (node --test)
 npx vercel link --project gmide-telemetry
 npx vercel deploy --prod      # publica em https://gmide-telemetry.vercel.app
 ```

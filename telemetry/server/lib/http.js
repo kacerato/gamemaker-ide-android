@@ -22,6 +22,9 @@ export async function readJson(req, maxBytes, maxInflated = maxBytes * 8) {
     try { buf = gunzipSync(buf, { maxOutputLength: maxInflated }); }
     catch { throw new HttpError(400, "gzip"); }
   }
+  // O app ate a 0.2.2 grava o lote com BOM UTF-8 (File.WriteAllText com Encoding.UTF8), e o
+  // Buffer.toString nao remove o BOM; sem esta linha o JSON.parse falha e o lote volta 400 "json".
+  if (buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) buf = buf.subarray(3);
   try { return JSON.parse(buf.toString("utf8")); }
   catch { throw new HttpError(400, "json"); }
 }

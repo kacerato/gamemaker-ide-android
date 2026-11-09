@@ -26,6 +26,8 @@ public static class Telemetry
     static string _process = "ide";
     static string? _sessionId;
     static readonly object _writeLock = new();
+    // UTF-8 sem BOM: Encoding.UTF8 grava EF BB BF no inicio do arquivo, e o JSON.parse do servidor recusa.
+    internal static readonly UTF8Encoding Utf8NoBom = new(false);
     static Exception? _lastCrash;
 
     public static string Dir => _dir;
@@ -235,7 +237,7 @@ public static class Telemetry
             int pid = global::Android.OS.Process.MyPid();
             var file = Path.Combine(_dir, $"q-{_process}-{pid}.jsonl");
             lock (_writeLock)
-                File.AppendAllText(file, line, Encoding.UTF8);
+                File.AppendAllText(file, line, Utf8NoBom);
         }
         catch (Exception e) { Log.Warn(Tag, "Append: " + e.Message); }
     }

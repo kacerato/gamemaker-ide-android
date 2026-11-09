@@ -5,7 +5,7 @@
   "type": "module",
   "engines": { "node": ">=22" },
   "scripts": {
-    "test": "node --test test/batch.test.js"
+    "test": "node --test --experimental-test-module-mocks test/batch.test.js test/ingest.test.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.0.2"

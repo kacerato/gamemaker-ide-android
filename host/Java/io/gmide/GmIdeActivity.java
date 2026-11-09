@@ -47,6 +47,8 @@ public class GmIdeActivity extends SDLActivity {
         super.onCreate(savedInstanceState);
         applySafeMargin();
         ShortcutBar.install(this);   // barra de atalhos (Esc, Ctrl/Shift/Alt, clique direito, teclado...)
+        WindowGrip.install(this);    // alca de redimensionar janelas flutuantes (MobileWindowGrip.cs)
+        MobileShell.install(this);   // casca mobile: barra superior, trilho de paineis, menu ⋮ (MobileShell.cs)
         // Telemetria opcional (docs/telemetria.md): pergunta uma vez, depois que a IDE comecou a abrir.
         getWindow().getDecorView().postDelayed(new Runnable() {
             @Override
@@ -119,14 +121,42 @@ public class GmIdeActivity extends SDLActivity {
         placeCodeBar();
     }
 
-    // Superficie da IDE acima do teclado (+ barra de simbolos) no modo editor de codigo.
+    // Superficie da IDE: acima do teclado (+ barra de simbolos) no modo editor de codigo e fora da
+    // barra superior e do trilho da casca mobile (MobileShell), que reservam faixas no topo e a esquerda.
     private void applyBottomPadding() {
         if (mLayout == null) return;
+        MobileShell.onLayoutChanged();   // a casca sai com o teclado de codigo aberto
         int ime = sImeBottom;
         int bottom = mSafePx;
         if (sShrink && ime > 0) bottom = Math.max(mSafePx, ime + codeBarHeight());
-        if (mLayout.getPaddingBottom() != bottom)
-            mLayout.setPadding(mSafePx, mSafePx, mSafePx, bottom);
+        int left = mSafePx + MobileShell.insetLeft(), top = mSafePx + MobileShell.insetTop();
+        if (mLayout.getPaddingBottom() != bottom || mLayout.getPaddingLeft() != left || mLayout.getPaddingTop() != top)
+            mLayout.setPadding(left, top, mSafePx, bottom);
+    }
+
+    /** Teclado aberto com o editor de codigo focado (modo foco: a casca some). */
+    public static boolean isCodeKeyboard() { return sShrink && sImeBottom > 0; }
+
+    /** A casca mudou de tamanho/visibilidade: recalcula o padding da superficie. Qualquer thread. */
+    public static void relayout() {
+        final GmIdeActivity a = sSelf;
+        if (a == null) return;
+        a.runOnUiThread(new Runnable() {
+            @Override
+            public void run() { a.applyBottomPadding(); }
+        });
+    }
+
+    // Voltar do Android: com a casca, fecha primeiro a folha aberta (menu/editores) ou a gaveta. O SDL
+    // prende a tecla (SDL_ANDROID_TRAP_BACK_BUTTON, vira Esc na IDE), entao o onBackPressed nao chega:
+    // intercepta aqui, antes do SDL, e so quando a casca tem algo a fechar.
+    @Override
+    public boolean dispatchKeyEvent(android.view.KeyEvent event) {
+        if (event.getKeyCode() == android.view.KeyEvent.KEYCODE_BACK && MobileShell.wantsBack()) {
+            if (event.getAction() == android.view.KeyEvent.ACTION_UP) MobileShell.handleBack();
+            return true;
+        }
+        return super.dispatchKeyEvent(event);
     }
 
     // ---- barra de simbolos do editor de codigo (estilo dos editores de codigo mobile)

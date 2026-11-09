@@ -94,6 +94,13 @@ static class MobileWindowPolicy
         Track(w);
     }
 
+    /// <summary>A janela deixou de ser flutuante (levada para o workspace pela casca): sai do ajuste a tela.</summary>
+    internal static void Untrack(GuiWindow w)
+    {
+        _floating.RemoveAll(r => !r.TryGetTarget(out var x) || x == w);
+        _states.Remove(w);
+    }
+
     static void Track(GuiWindow w)
     {
         foreach (var r in _floating) if (r.TryGetTarget(out var x) && x == w) return;
@@ -117,6 +124,12 @@ static class MobileWindowPolicy
     {
         try { FollowFocus(); } catch (Exception e) { Log.Warn(Tag, "Foco: " + e.Message); }
         try { FitFloating(); } catch (Exception e) { Log.Warn(Tag, "Janelas flutuantes: " + e.Message); }
+        MobileWindowGrip.OnFrame(LiveFloating());   // alca de redimensionar pelo toque
+    }
+
+    static IEnumerable<GuiWindow> LiveFloating()
+    {
+        foreach (var r in _floating) if (r.TryGetTarget(out var w)) yield return w;
     }
 
     // Janela do workspace que contem o gadget focado: a mais externa antes do WorkspaceChain.
@@ -155,8 +168,12 @@ static class MobileWindowPolicy
         return r.x >= v.x - 2 && r.y >= v.y - 2 && r.y < v.y + v.h * 0.5f && visW >= Math.Min(r.w, v.w) * 0.6f;
     }
 
-    /// <summary>Zoom 100% e vista ate a janela (canto superior esquerdo se ela for maior que a area).</summary>
-    static void ShowWindow(GUIBase win)
+    /// <summary>
+    /// Vista ate a janela (canto superior esquerdo se ela for maior que a area), no zoom em que o usuario
+    /// deixou o workspace. Antes voltava a 100% a cada editor aberto, o que desfazia a pinca de quem
+    /// afastou para abrir outra janela ao lado. Tambem usada pela casca (MobileShell, seletor de editores).
+    /// </summary>
+    internal static void ShowWindow(GUIBase win)
     {
         try
         {
@@ -165,7 +182,6 @@ static class MobileWindowPolicy
             for (var p = win.parent; p != null; p = p.parent) if (p is WorkspaceArea a) { area = a; break; }
             if (area == null) return;
             area.AbortPanAnimation();
-            if (area.Layout.ClipScale < 1f) { area.Layout.ClipScale = 1f; area.DirtyLayout(); }
             WindowManager.OnPostLayout.DoOnce(delegate
             {
                 try { if (!win.Destroyed) area.PanToGadget(win, false); }
@@ -212,9 +228,11 @@ static class MobileWindowPolicy
             foreach (var d in details?.DockMan?.GetDocks() ?? Array.Empty<DockContainer>())
             {
                 if (d == null || d.Destroyed || d.DockState != eDockState.Expanded) continue;
-                if (d.DockType is not (eDockContainerType.eLeft or eDockContainerType.eRight)) continue;
+                // Com a casca (MobileShell) toda gaveta fecha, inclusive a de baixo (Saida...).
+                if (d.DockType is not (eDockContainerType.eLeft or eDockContainerType.eRight) &&
+                    !(MobileShell.Active && d.DockType == eDockContainerType.eBottom)) continue;
                 if (IsInside(near, d)) continue;
-                d.Collapse();
+                MobileShell.CloseDock(d);
                 Log.Info(Tag, $"Painel {d.DockType} recolhido (gaveta)");
             }
         }

@@ -259,6 +259,8 @@ static class KeyboardMode
     }
 
     static bool _active;
+    /// <summary>Modo codigo com teclado ativo (a casca esconde a barra superior e o trilho).</summary>
+    internal static bool IsActive => _active;
     static int _offFrames;         // quadros seguidos com teclado fechado
 
     static void OnFrame(int desktopId, TimeSpan delta)
@@ -332,7 +334,7 @@ static class KeyboardMode
             foreach (var d in details.DockMan?.GetDocks() ?? Array.Empty<DockContainer>())
                 if (d != null && d.DockState == eDockState.Expanded && !IsInside(win, d))
                 {
-                    d.Collapse();
+                    MobileShell.CloseDock(d);
                     _collapsed.Add(d);
                 }
         }

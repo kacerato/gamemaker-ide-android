@@ -12,14 +12,18 @@ namespace GmIde;
 //                             arrastar depois disso = arrastar com o esquerdo (arrastar e soltar)
 //   arrastar 1 dedo numa area rolavel -> rolagem direta 1:1 com inercia (MobileScroll)
 //   toque com 2 dedos      -> clique direito no ponto do 1o dedo
-//   arrastar com 2 dedos   -> SDL_MOUSEWHEEL (vertical e horizontal, rolagem natural)
-//   pinca com 2 dedos      -> Ctrl + SDL_MOUSEWHEEL (zoom nos editores de sprite/room)
+//   arrastar com 2 dedos   -> num canvas (room, sprite, tileset) ou no workspace: o conteudo acompanha
+//                             os dedos 1:1 nos dois eixos (MobileWorkspace); em listas/Inspetor/codigo:
+//                             SDL_MOUSEWHEEL (vertical e horizontal, rolagem natural)
+//   pinca com 2 dedos      -> no workspace (inclusive sobre janelas de editores): zoom continuo entre os
+//                             dedos (MobileWorkspace.SetPinch); em canvas e paineis: Ctrl + SDL_MOUSEWHEEL
+//   modo Mover (barra)     -> um dedo arrasta o canvas sob ele (room...) ou o workspace
 //   Voltar (AC_BACK)       -> Esc
 // Barra de atalhos (ShortcutBar.java / ShortcutBridge.cs): tecla HELP = comandos;
 // "proximo toque = clique direito"; Ctrl/Shift/Alt de um uso soltos depois do
 // proximo clique/tecla; SDL_TEXTINPUT bloqueado com Ctrl/Alt presos.
 // So mexe em eventos de mouse com which == SDL_TOUCH_MOUSEID (os sinteticos do
-// toque). Mouse real passa intacto. SDL_MULTIGESTURE passa intacto.
+// toque). Mouse real passa intacto. SDL_MULTIGESTURE e descartado (ver Handle).
 //
 // Preferencias ("gmide", lidas no Install):
 //   touch_wheel_step_dp  int (padrao 24): deslocamento dos dedos por "notch" da roda
@@ -93,6 +97,16 @@ static unsafe class TouchInput
     public static volatile bool PanMode;
     enum TwoKind { Undecided, Pan, Pinch }
 
+    // Dois dedos juntos fora do modo Mover: sobre um canvas (room, sprite, tileset) ou o workspace, o
+    // conteudo acompanha os dedos 1:1 nos dois eixos (MobileWorkspace); sobre listas, Inspetor e codigo
+    // vira roda do mouse. A IDE responde no quadro seguinte (MobileWindowFit.ProbeCanvas); enquanto isso
+    // o deslocamento acumula, e sem resposta em CanvasProbeWaitMs vale a roda.
+    enum TwoTarget { Unknown, Canvas, Wheel }
+    static TwoTarget _twoTarget;
+    static int _twoProbeGen;
+    static long _twoProbeTicks;
+    const int CanvasProbeWaitMs = 200;
+
     // Pinca: cada variacao de 15% na distancia entre os dedos = 1 notch de Ctrl+roda.
     const float PinchStepRatio = 1.15f;
 
@@ -113,6 +127,7 @@ static unsafe class TouchInput
     static readonly Dictionary<long, (float x, float y)> _fingerPos = new();
     static TwoKind _twoKind;
     static float _pinchStartDist, _pinchRefDist, _twoStartCx, _twoStartCy;
+    static float _prevCx, _prevCy;   // centro dos dedos no ultimo movimento (pinca do workspace)
     static bool _pinchCtrlDown;   // empurramos um LCTRL sintetico
     static int _pinchSteps, _panSteps;
 
@@ -330,14 +345,25 @@ static unsafe class TouchInput
             case Sdl.MOUSEBUTTONDOWN:
             case Sdl.MOUSEBUTTONUP:
             case Sdl.MOUSEMOTION:
-                if (e->which != Sdl.TOUCH_MOUSEID) return true; // mouse real
+                if (e->which != Sdl.TOUCH_MOUSEID) return HandleRealMouse(e);
                 return HandleTouchMouse(e);
+
+            case Sdl.MOUSEWHEEL:
+                return e->which == Sdl.TOUCH_MOUSEID || HandleRealMouse(e);
 
             case Sdl.FINGERDOWN:
             case Sdl.FINGERUP:
             case Sdl.FINGERMOTION:
                 HandleFinger(e);
                 return true; // a IDE so usa FINGERDOWN/UP sem argumentos; deixa passar
+
+            case Sdl.MULTIGESTURE:
+                // Os dois dedos sao nossos (rolagem, arraste do canvas, pinca). O gesto nativo do SDL
+                // chegava junto ao PanArea/WorkspaceArea (PanArea_Multigesture): qualquer variacao de
+                // distancia > 0.03 entre os dedos virava zoom e WindowManager.SetZoomLockGadget, e com o
+                // zoom travado DoMouseWheelEvent descarta toda roda ate o dedo sair. Arrastar a room
+                // para os lados com dois dedos dava zoom tremido ou nada.
+                return false;
 
             default:
                 return true;
@@ -470,6 +496,7 @@ static unsafe class TouchInput
                         if (PanMode && dx * dx + dy * dy > _slopPx * _slopPx)
                         {
                             _mode = Mode.Panning;
+                            MobileWorkspace.BeginGesture();   // alvo: canvas sob o dedo (room...) ou workspace
                             MobileWorkspace.AddPan(_downX - e->x, _downY - e->y);
                             e->motionState = 0;
                             keep = true;
@@ -559,6 +586,103 @@ static unsafe class TouchInput
         return keep;
     }
 
+    // ---- mouse real (Bluetooth/USB) sem teclado
+    // Na IDE desktop a vista de um canvas anda com o botao do meio, Espaco+esquerdo ou Shift+roda, e o
+    // zoom e Ctrl+roda. No celular nao ha teclado e muitos mouses nao tem roda horizontal: a roda so
+    // rolava a room para cima e para baixo. Entao, so sobre canvas (room, sprite, tileset) e workspace:
+    //   arrastar com o direito -> a vista acompanha o mouse 1:1 (MobileWorkspace, como os dois dedos);
+    //   direito segurado + roda -> zoom (Ctrl+roda);
+    //   clique direito sem arrastar -> clique direito normal (menu de contexto).
+    // Fora de canvas (listas, paineis) o direito segurado e entregue como antes. O "down" do direito fica
+    // segurado ate decidir; a IDE diz o que ha sob o ponteiro (MobileWindowFit.ProbeCanvas).
+    static bool _rmbHeld, _rmbPan, _rmbUsed, _rmbCtrl;
+    static Sdl.Event _rmbDown;
+    static int _rmbX, _rmbY, _rmbLastX, _rmbLastY, _rmbProbeGen;
+    static long _rmbTicks;
+    const int MouseProbeWaitMs = 400;   // a IDE responde num quadro; folga para quadros lentos
+
+    static bool HandleRealMouse(Sdl.Event* e)
+    {
+        List<Sdl.Event>? inject = null;
+        bool keep = true;
+        lock (_gate)
+        {
+            switch (e->type)
+            {
+                case Sdl.MOUSEBUTTONDOWN when e->button == Sdl.BUTTON_RIGHT:
+                    _rmbHeld = true; _rmbPan = _rmbUsed = _rmbCtrl = false;
+                    _rmbDown = *e;
+                    _windowId = e->windowID;
+                    _rmbX = _rmbLastX = e->x; _rmbY = _rmbLastY = e->y;
+                    _rmbTicks = Environment.TickCount64;
+                    MobileWorkspace.CanvasProbeX = e->x;
+                    MobileWorkspace.CanvasProbeY = e->y;
+                    MobileWorkspace.CanvasProbeTolerance = int.MaxValue;
+                    _rmbProbeGen = ++MobileWorkspace.CanvasProbeGen;
+                    keep = false;   // segura ate saber se e clique, arraste da vista ou zoom
+                    break;
+
+                case Sdl.MOUSEMOTION when _rmbHeld:
+                {
+                    int px = _rmbLastX, py = _rmbLastY;
+                    _rmbLastX = e->x; _rmbLastY = e->y;
+                    if (_rmbPan)
+                    {
+                        MobileWorkspace.AddPan(px - e->x, py - e->y);
+                        e->motionState = 0;   // para a IDE e so o ponteiro andando
+                        break;
+                    }
+                    if (_rmbUsed) { e->motionState = 0; break; }
+                    float dx = e->x - _rmbX, dy = e->y - _rmbY;
+                    if (dx * dx + dy * dy <= _slopPx * _slopPx) { e->motionState = 0; break; }
+                    bool answered = MobileWorkspace.TryGetCanvasProbe(_rmbProbeGen, out bool canvas, out _);
+                    if (!answered && Environment.TickCount64 - _rmbTicks < MouseProbeWaitMs) { e->motionState = 0; break; }
+                    if (answered && canvas)
+                    {
+                        _rmbPan = true;
+                        MobileWorkspace.BeginGesture();
+                        MobileWorkspace.AddPan(_rmbX - e->x, _rmbY - e->y);
+                        e->motionState = 0;
+                        Log.Info(Tag, $"Mouse: arrastar com o direito -> mover a vista desde ({_rmbX},{_rmbY})");
+                    }
+                    else
+                    {
+                        // Nao e canvas: o arraste com o direito segue como na IDE desktop.
+                        _rmbHeld = false;
+                        inject = new() { _rmbDown };
+                        Log.Info(Tag, "Mouse: arrastar com o direito fora de canvas -> direito normal");
+                    }
+                    break;
+                }
+
+                case Sdl.MOUSEBUTTONUP when e->button == Sdl.BUTTON_RIGHT && _rmbHeld:
+                    _rmbHeld = false;
+                    if (_rmbCtrl) { (inject ??= new()).Add(CtrlKey(Sdl.KEYUP)); _rmbCtrl = false; }
+                    if (_rmbPan || _rmbUsed) keep = false;
+                    else
+                    {
+                        // Clique direito sem arrastar: entrega o "down" segurado e este "up".
+                        (inject ??= new()).Add(_rmbDown);
+                        e->x = _rmbX; e->y = _rmbY;
+                    }
+                    break;
+
+                case Sdl.MOUSEWHEEL when _rmbHeld && !_rmbPan:
+                    // Direito segurado + roda = zoom. O Ctrl fica preso ate soltar o direito.
+                    if (!_rmbCtrl && ShortcutBridge.Ctrl == ShortcutBridge.Off)
+                    {
+                        (inject ??= new()).Add(CtrlKey(Sdl.KEYDOWN));
+                        _rmbCtrl = true;
+                    }
+                    if (!_rmbUsed) Log.Info(Tag, "Mouse: direito segurado + roda -> zoom (Ctrl+roda)");
+                    _rmbUsed = true;
+                    break;
+            }
+        }
+        if (inject != null) Push(inject);
+        return keep;
+    }
+
     static void HandleFinger(Sdl.Event* e)
     {
         List<Sdl.Event>? inject = null;
@@ -618,23 +742,47 @@ static unsafe class TouchInput
                         // Ponteiro no centro dos dedos: a IDE rola / da zoom onde o mouse esta.
                         _lastX = (int)_twoStartCx; _lastY = (int)_twoStartCy;
                         inject = new() { Motion(_windowId, _lastX, _lastY) };
+                        if (PanMode)
+                        {
+                            if (_twoKind == TwoKind.Pan) MobileWorkspace.BeginGesture();
+                        }
+                        else
+                        {
+                            // O que ha sob o centro dos dedos decide arraste/pinca diretos ou roda.
+                            _twoTarget = TwoTarget.Unknown;
+                            _twoProbeTicks = Environment.TickCount64;
+                            MobileWorkspace.CanvasProbeTolerance = 3;
+                            MobileWorkspace.CanvasProbeX = _lastX;
+                            MobileWorkspace.CanvasProbeY = _lastY;
+                            _twoProbeGen = ++MobileWorkspace.CanvasProbeGen;
+                        }
                         if (_twoKind == TwoKind.Pinch)
                         {
                             _pinchRefDist = _pinchStartDist;
-                            // Ctrl+roda = zoom. Se o Ctrl da barra ja estiver preso, nao mexe nele.
-                            // No modo Mover o zoom vai direto para o workspace (sem Ctrl).
-                            if (!PanMode && ShortcutBridge.Ctrl == ShortcutBridge.Off)
-                            {
-                                inject.Add(CtrlKey(Sdl.KEYDOWN));
-                                _pinchCtrlDown = true;
-                            }
+                            _prevCx = cx; _prevCy = cy;
                         }
-                        Log.Info(Tag, $"Dois dedos -> {(_twoKind == TwoKind.Pinch ? "pinca (Ctrl+roda)" : "rolagem (roda)")}: " +
+                        Log.Info(Tag, $"Dois dedos -> {(_twoKind == TwoKind.Pinch ? "pinca" : "arraste")}: " +
                                       $"abertura {spread:F0}px, deslocamento {pan:F0}px, ponteiro em ({_lastX},{_lastY})");
                     }
 
                     if (_twoKind == TwoKind.Pinch)
                     {
+                        if (!PanMode)
+                        {
+                            if (!ResolveTwoTarget(pinch: true, ref inject)) break;   // acumula ate a resposta
+                            if (_twoTarget == TwoTarget.Canvas)
+                            {
+                                // Pinca do workspace: zoom continuo (razao das distancias) no ponto entre os
+                                // dedos, e o centro dos dedos tambem arrasta.
+                                float r = dist > 1 && _pinchStartDist > 1 ? dist / _pinchStartDist : 1f;
+                                if (_pinchInvert) r = 1f / r;
+                                MobileWorkspace.SetPinch(r, cx, cy);
+                                MobileWorkspace.AddPan(_prevCx - cx, _prevCy - cy);
+                                _prevCx = cx; _prevCy = cy;
+                                (inject ??= new()).Add(Motion(_windowId, _lastX, _lastY));   // acorda o observador da IDE
+                                break;
+                            }
+                        }
                         if (dist > 1 && _pinchRefDist > 1)
                         {
                             int steps = (int)(MathF.Log(dist / _pinchRefDist) / MathF.Log(PinchStepRatio));
@@ -662,6 +810,15 @@ static unsafe class TouchInput
                     }
                     else
                     {
+                        if (!ResolveTwoTarget(pinch: false, ref inject)) break;   // acumula ate a resposta
+                        if (_twoTarget == TwoTarget.Canvas)
+                        {
+                            // Conteudo acompanha os dedos (sem a inversao da roda: e manipulacao direta).
+                            MobileWorkspace.AddPan(-_twoAccX, -_twoAccY);
+                            _twoAccX = _twoAccY = 0;
+                            (inject ??= new()).Add(Motion(_windowId, _lastX, _lastY));   // acorda o observador da IDE
+                            break;
+                        }
                         int stepsY = (int)(_twoAccY / _wheelStepPx);
                         int stepsX = (int)(_twoAccX / _wheelStepPx);
                         if (stepsY != 0 || stepsX != 0)
@@ -708,6 +865,34 @@ static unsafe class TouchInput
         }
         if (inject != null) Push(inject);
         if (clickDone) ShortcutBridge.NotifyKeyUsed("toque com dois dedos");
+    }
+
+    /// <summary>
+    /// Dois dedos fora do modo Mover (chamar com _gate): decide pela resposta da IDE se o gesto e direto
+    /// (arraste: canvas/workspace; pinca: workspace) ou vira roda. false = ainda sem resposta. Pinca por
+    /// roda precisa do Ctrl (Ctrl+roda = zoom); o Ctrl da barra, se preso, ja serve.
+    /// </summary>
+    static bool ResolveTwoTarget(bool pinch, ref List<Sdl.Event>? inject)
+    {
+        if (_twoTarget != TwoTarget.Unknown) return true;
+        if (MobileWorkspace.TryGetCanvasProbe(_twoProbeGen, out bool canvas, out bool zoomWorkspace))
+        {
+            bool direct = pinch ? zoomWorkspace : canvas;
+            _twoTarget = direct ? TwoTarget.Canvas : TwoTarget.Wheel;
+            if (direct) MobileWorkspace.BeginGesture();
+        }
+        else if (Environment.TickCount64 - _twoProbeTicks > CanvasProbeWaitMs)
+        {
+            _twoTarget = TwoTarget.Wheel;
+            Log.Info(Tag, "Dois dedos: IDE nao respondeu a sondagem; usando a roda");
+        }
+        else return false;
+        if (pinch && _twoTarget == TwoTarget.Wheel && ShortcutBridge.Ctrl == ShortcutBridge.Off)
+        {
+            (inject ??= new()).Add(CtrlKey(Sdl.KEYDOWN));
+            _pinchCtrlDown = true;
+        }
+        return true;
     }
 
     // Centro e distancia (px) entre os dois primeiros dedos na tela.

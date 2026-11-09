@@ -102,10 +102,22 @@ public final class MobileShell {
     /** GmIdeActivity: teclado/insets mudaram. Thread de UI. */
     public static void onLayoutChanged() { applyVisibility(); }
 
-    /** Botao voltar do Android: fecha a folha aberta. */
+    /** Voltar do Android tem algo a fechar na casca (folha aberta ou gaveta)? */
+    public static boolean wantsBack() {
+        return sSheetKind != 0 || (sOn && sVisible && anyPanelOpen());
+    }
+
+    /** Botao voltar do Android: fecha a folha aberta ou a gaveta. */
     public static boolean handleBack() {
         if (sSheetKind == 1 && sMenuPath.size() > 1) { menuBack(); return true; }
         if (sSheetKind != 0) { closeSheet(); return true; }
+        if (sOn && anyPanelOpen()) { send("closepanels"); return true; }   // voltar fecha a gaveta
+        return false;
+    }
+
+    private static boolean anyPanelOpen() {
+        JSONArray p = sState.optJSONArray("panels");
+        for (int i = 0; p != null && i < p.length(); i++) if (p.optJSONObject(i).optInt("o") == 1) return true;
         return false;
     }
 
@@ -311,6 +323,18 @@ public final class MobileShell {
                 @Override public void onClick(View v) { tap(v); send("panel:" + p.optInt("d") + ":" + p.optInt("i")); }
             });
             sRail.addView(item, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            if (open) {
+                // painel aberto sempre a vista no trilho (o destaque mostra qual gaveta esta aberta)
+                final View target = item;
+                sRailScroll.post(new Runnable() {
+                    @Override public void run() {
+                        int top = target.getTop(), bottom = target.getBottom();
+                        int y = sRailScroll.getScrollY(), h = sRailScroll.getHeight();
+                        if (top < y) sRailScroll.smoothScrollTo(0, top);
+                        else if (bottom > y + h) sRailScroll.smoothScrollTo(0, bottom - h);
+                    }
+                });
+            }
         }
     }
 

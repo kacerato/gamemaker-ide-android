@@ -115,6 +115,7 @@ static class MobileShell
             else if (_active && (!_wanted || !project)) Restore(_wanted ? "projeto fechado" : "interface classica");
 
             if (_active && ready && _frame % 30 == 0) Enforce(details!);
+            if (_active && ready) WatchEditorTab(details!);
             if (_frame % 8 == 0) PublishState(details, ready);
         }
         catch (Exception e) { Log.Error(Tag, "OnFrame: " + e); }
@@ -165,9 +166,9 @@ static class MobileShell
         var docks = details.DockMan!.GetDocks() ?? Array.Empty<DockContainer>();
         foreach (var d in docks) if (d != null) HideStrip(d);
 
-        // 3. Docks somem (nem a tirinha de recolhido fica); abrem como gaveta pelo trilho.
+        // 3. Docks fechados (nem a tirinha de recolhido fica); abrem como gaveta pelo trilho.
         foreach (var d in docks)
-            if (d != null && !d.Destroyed && d.DockState != eDockState.Hidden) d.Hide();
+            if (d != null && !d.Destroyed && d.GetTabCount() > 0) Shut(d);
 
         stack.DirtyLayout();
         _applyClock.Restart();
@@ -193,15 +194,18 @@ static class MobileShell
         {
             var wm = YoYoStudio.IDE.WindowManager;
             var details = _details ?? wm?.GetDesktopDetails(WindowManager.CurrentDesktopID);
-            // Docks com abas voltam ao estado classico: recolhidos, com a tirinha de expandir.
+            // Docks com abas voltam ao estado classico: recolhidos, com a tirinha de expandir (o Expand
+            // devolve a coluna/linha da grade; o Collapse poe a largura da tirinha).
             foreach (var d in details?.DockMan?.GetDocks() ?? Array.Empty<DockContainer>())
-                if (d != null && !d.Destroyed && d.DockState == eDockState.Hidden && d.GetTabCount() > 0) d.Collapse();
+                if (d != null && !d.Destroyed && d.GetTabCount() > 0 && d.DockState != eDockState.Expanded)
+                { d.Expand(); d.Collapse(_bStoreSize: false); }
         }
         catch (Exception e) { Log.Warn(Tag, "Restaurar docks: " + e.Message); }
         try { if (_stack != null && !_stack.Destroyed) _stack.DirtyLayout(); } catch { }
         _stack = null;
         _details = null;
         _lastState = null;
+        _lastTab = null;
         Log.Info(Tag, "Moldura original restaurada (" + why + ")");
     }
 
@@ -216,20 +220,44 @@ static class MobileShell
                 Log.Info(Tag, $"Moldura reapareceu ({c.GetType().Name}); escondida de novo");
             }
         HideStrip(details.Chrome!.tabControl);
-        // Dock recolhido mostra a tirinha "<<"; na casca o fechado e Hidden. Logo depois de abrir o projeto
-        // a IDE ainda restaura o layout salvo (docks expandidos): ate o usuario mexer num painel, ou por
-        // alguns segundos, esses tambem voltam a ficar fechados.
+        // Dock recolhido mostra a tirinha "<<"; na casca o fechado nao tem tirinha (Shut). Logo depois de
+        // abrir o projeto a IDE ainda restaura o layout salvo (docks expandidos): ate o usuario mexer num
+        // painel, ou por alguns segundos, esses tambem voltam a ficar fechados.
         bool settling = !_userPanels && _applyClock.ElapsedMilliseconds < 15000;
         foreach (var d in details.DockMan!.GetDocks() ?? Array.Empty<DockContainer>())
         {
             if (d == null || d.Destroyed) continue;
             HideStrip(d);
             if (d.GetTabCount() == 0) continue;
-            if (d.DockState == eDockState.Collapsed || (settling && d.DockState == eDockState.Expanded))
+            if ((d.DockState == eDockState.Collapsed && SlotSize(d) > 0) || d.DockState == eDockState.Hidden ||
+                (settling && d.DockState == eDockState.Expanded))
             {
                 Log.Info(Tag, $"Dock {d.DockType} {d.DockState} pela IDE; fechado (gaveta)");
-                d.Hide();
+                Shut(d);
             }
+        }
+    }
+
+    // Abrir um editor (sala, sprite, objeto) muda a aba ativa do workspace. Quem abriu foi a gaveta de
+    // Recursos (dock da direita): ela fecha sozinha para o editor ganhar a largura. Os paineis que o
+    // proprio editor abre (Camadas/Inspetor da sala, a esquerda) ficam.
+    static WeakReference<TabItem>? _lastTab;
+
+    static void WatchEditorTab(DesktopDetails details)
+    {
+        var tc = details.Chrome!.tabControl;
+        var active = tc.ActiveTab;
+        TabItem? last = null;
+        _lastTab?.TryGetTarget(out last);
+        if (active == null || active == last) return;
+        bool first = _lastTab == null;
+        _lastTab = new WeakReference<TabItem>(active);
+        if (first) return;
+        var right = details.DockMan?.GetDock(eDockContainerType.eRight);
+        if (right != null && right.DockState == eDockState.Expanded)
+        {
+            CloseDock(right);
+            Log.Info(Tag, $"Editor '{Clean(active.Label)}' aberto: gaveta de Recursos fechada");
         }
     }
 
@@ -269,11 +297,50 @@ static class MobileShell
 
     // ------------------------------------------------------------------ docks como gavetas
 
-    /// <summary>Fecha um painel: some de vez com a casca, recolhe (com a tirinha) sem ela.</summary>
+    /// <summary>Fecha um painel: com a casca, recolhido e sem a tirinha; sem ela, recolhido com a tirinha.</summary>
     internal static void CloseDock(DockContainer d)
     {
         if (d.Destroyed) return;
-        if (_active) d.Hide(); else d.Collapse();
+        if (_active) Shut(d); else d.Collapse();
+    }
+
+    // Fechado na casca = Collapse (o caminho da IDE: desliga os paineis do dock e o divisor) + a coluna ou
+    // linha do dock na grade em 0 px (a tirinha "<<" some). DockContainer.Hide() nao serve: no dock de
+    // baixo o conteudo (ex.: Prefab Library) continuava desenhado por cima do workspace, pegando os toques.
+    // Expand() devolve o tamanho salvo da gaveta (RestoreSize), entao abrir de novo funciona igual.
+    static void Shut(DockContainer d)
+    {
+        if (d.DockState == eDockState.Hidden) d.Expand();   // Unhide: volta ao caminho normal
+        if (d.DockState == eDockState.Expanded) d.Collapse();
+        SetSlot(d, Zero);
+    }
+
+    static float SlotSize(DockContainer d)
+    {
+        var g = d.ParentGrid;
+        if (g == null) return 0;
+        var slot = d.DockType switch
+        {
+            eDockContainerType.eLeft => g.GridColumnLayout?[0],
+            eDockContainerType.eRight => g.GridColumnLayout?[2],
+            eDockContainerType.eBottom => g.GridRowLayout?[1],
+            _ => null,
+        };
+        return slot == null ? 0 : slot.ToPixels(d);
+    }
+
+    static void SetSlot(DockContainer d, GridLayout size)
+    {
+        var g = d.ParentGrid;
+        if (g == null) return;
+        switch (d.DockType)
+        {
+            case eDockContainerType.eLeft: if (g.GridColumnLayout?.Length > 0) g.GridColumnLayout[0] = size; break;
+            case eDockContainerType.eRight: if (g.GridColumnLayout?.Length > 2) g.GridColumnLayout[2] = size; break;
+            case eDockContainerType.eBottom: if (g.GridRowLayout?.Length > 1) g.GridRowLayout[1] = size; break;
+            default: return;
+        }
+        g.DirtyLayout();
     }
 
     static void TogglePanel(DesktopDetails details, int dockIndex, int tab)
@@ -297,10 +364,28 @@ static class MobileShell
         _userPanels = true;
         foreach (var other in docks)
             if (other != null && other != dock && other.DockState == eDockState.Expanded) CloseDock(other);
+        CapDrawer(dock);
         dock.Expand();
         dock.ActivateTab(tab);
         HideStrip(dock);
         Log.Info(Tag, $"Gaveta {dock.DockType} aberta na aba {tab} ('{dock.GetTab(tab)?.Label}')");
+    }
+
+    // Gaveta com no maximo 45% da largura (laterais) ou da altura (a de baixo): sempre sobra editor ou
+    // workspace a vista para tocar fora e fechar. O tamanho salvo do layout podia cobrir a tela inteira.
+    static void CapDrawer(DockContainer dock)
+    {
+        try
+        {
+            var gr = dock.ParentGrid?.AbsoluteContentRect;
+            if (gr == null || gr.w <= 0 || gr.h <= 0) return;
+            float maxPx = (dock.DockType == eDockContainerType.eBottom ? gr.h : gr.w) * 0.45f;
+            float cur = dock.RestoreSize.ToPixels(dock);
+            if (cur <= maxPx) return;
+            dock.SetRestoreSize(GUIMeasurement.DpiPixels((float)Math.Floor(maxPx * dock.ScreenToDPIPixelConversion)));
+            Log.Info(Tag, $"Gaveta {dock.DockType}: {cur:F0}px -> {maxPx:F0}px (45% da tela)");
+        }
+        catch (Exception e) { Log.Warn(Tag, "Limitar gaveta: " + e.Message); }
     }
 
     static void ClosePanels(DesktopDetails details)
@@ -330,10 +415,12 @@ static class MobileShell
         {
             if (!_active || elements == null || elements.Count == 0 || KeyboardMode.IsActive) return;
             if (elements.All(e => e?.GetType().Name == "GMRoom")) return;
+            // Selecao feita dentro de um painel (Recursos, Camadas, Prefab Library no dock...): o foco ou o
+            // gadget sob o dedo estao num DockContainer.
             var wm = YoYoStudio.IDE.WindowManager;
-            var g = wm?.ActiveGadget;
-            for (var cur = g; cur != null; cur = cur.parent)
-                if (cur is DockContainer) return;
+            foreach (var g in new[] { wm?.ActiveGadget, wm?.GetMouseOverGadget() })
+                for (var cur = g; cur != null; cur = cur.parent)
+                    if (cur is DockContainer) return;
             string what = elements[0]?.GetType().Name ?? "?";
             WindowManager.OnPostInput.DoOnce(delegate
             {

@@ -47,6 +47,7 @@ public class GmIdeActivity extends SDLActivity {
         super.onCreate(savedInstanceState);
         applySafeMargin();
         ShortcutBar.install(this);   // barra de atalhos (Esc, Ctrl/Shift/Alt, clique direito, teclado...)
+        WindowGrip.install(this);    // alca de redimensionar janelas flutuantes (MobileWindowGrip.cs)
         MobileShell.install(this);   // casca mobile: barra superior, trilho de paineis, menu ⋮ (MobileShell.cs)
         // Telemetria opcional (docs/telemetria.md): pergunta uma vez, depois que a IDE comecou a abrir.
         getWindow().getDecorView().postDelayed(new Runnable() {
@@ -146,10 +147,16 @@ public class GmIdeActivity extends SDLActivity {
         });
     }
 
+    // Voltar do Android: com a casca, fecha primeiro a folha aberta (menu/editores) ou a gaveta. O SDL
+    // prende a tecla (SDL_ANDROID_TRAP_BACK_BUTTON, vira Esc na IDE), entao o onBackPressed nao chega:
+    // intercepta aqui, antes do SDL, e so quando a casca tem algo a fechar.
     @Override
-    public void onBackPressed() {
-        if (MobileShell.handleBack()) return;   // fecha a folha aberta da casca
-        super.onBackPressed();
+    public boolean dispatchKeyEvent(android.view.KeyEvent event) {
+        if (event.getKeyCode() == android.view.KeyEvent.KEYCODE_BACK && MobileShell.wantsBack()) {
+            if (event.getAction() == android.view.KeyEvent.ACTION_UP) MobileShell.handleBack();
+            return true;
+        }
+        return super.dispatchKeyEvent(event);
     }
 
     // ---- barra de simbolos do editor de codigo (estilo dos editores de codigo mobile)

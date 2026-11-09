@@ -17,7 +17,7 @@ final class ShellIcon extends Drawable {
         PLUS = 14, PANEL = 15, DOT = 16, CHEVRON_RIGHT = 17, WINDOW = 18, TOOLS = 19,
         GEAR = 20, SAVE = 21, BROOM = 22, EXPORT = 23, HELP = 24, HOME = 25, TARGET = 26, USER = 27,
         ZOOM_IN = 28, ZOOM_OUT = 29, ZOOM_RESET = 30, FILE = 31, BRANCH = 32, WARNING = 33, CUBE = 34,
-        BREAKPOINT = 35;
+        BREAKPOINT = 35, RESIZE = 36, DOCK_IN = 37;
 
     private final int mType;
     private final Paint mStroke = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -243,6 +243,20 @@ final class ShellIcon extends Drawable {
             case BREAKPOINT:
                 c.drawCircle(12, 12, 7.5f, mStroke);
                 c.drawCircle(12, 12, 4, mFill);
+                break;
+            case RESIZE:
+                p.moveTo(13, 5); p.lineTo(19, 5); p.lineTo(19, 11);
+                p.moveTo(19, 5); p.lineTo(5, 19);
+                p.moveTo(5, 13); p.lineTo(5, 19); p.lineTo(11, 19);
+                c.drawPath(p, mStroke);
+                break;
+            case DOCK_IN:
+                mR.set(3.5f, 5, 20.5f, 19.5f);
+                c.drawRoundRect(mR, 2, 2, mStroke);
+                c.drawLine(3.5f, 9, 20.5f, 9, mStroke);
+                p.moveTo(12, 11.5f); p.lineTo(12, 17.5f);
+                p.moveTo(9, 14.5f); p.lineTo(12, 17.5f); p.lineTo(15, 14.5f);
+                c.drawPath(p, mStroke);
                 break;
             case PANEL:
             default:

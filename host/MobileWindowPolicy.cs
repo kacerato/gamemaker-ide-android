@@ -94,6 +94,13 @@ static class MobileWindowPolicy
         Track(w);
     }
 
+    /// <summary>A janela deixou de ser flutuante (levada para o workspace pela casca): sai do ajuste a tela.</summary>
+    internal static void Untrack(GuiWindow w)
+    {
+        _floating.RemoveAll(r => !r.TryGetTarget(out var x) || x == w);
+        _states.Remove(w);
+    }
+
     static void Track(GuiWindow w)
     {
         foreach (var r in _floating) if (r.TryGetTarget(out var x) && x == w) return;
@@ -117,6 +124,12 @@ static class MobileWindowPolicy
     {
         try { FollowFocus(); } catch (Exception e) { Log.Warn(Tag, "Foco: " + e.Message); }
         try { FitFloating(); } catch (Exception e) { Log.Warn(Tag, "Janelas flutuantes: " + e.Message); }
+        MobileWindowGrip.OnFrame(LiveFloating());   // alca de redimensionar pelo toque
+    }
+
+    static IEnumerable<GuiWindow> LiveFloating()
+    {
+        foreach (var r in _floating) if (r.TryGetTarget(out var w)) yield return w;
     }
 
     // Janela do workspace que contem o gadget focado: a mais externa antes do WorkspaceChain.

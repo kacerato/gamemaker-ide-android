@@ -345,8 +345,11 @@ static unsafe class TouchInput
             case Sdl.MOUSEBUTTONDOWN:
             case Sdl.MOUSEBUTTONUP:
             case Sdl.MOUSEMOTION:
-                if (e->which != Sdl.TOUCH_MOUSEID) return true; // mouse real
+                if (e->which != Sdl.TOUCH_MOUSEID) return HandleRealMouse(e);
                 return HandleTouchMouse(e);
+
+            case Sdl.MOUSEWHEEL:
+                return e->which == Sdl.TOUCH_MOUSEID || HandleRealMouse(e);
 
             case Sdl.FINGERDOWN:
             case Sdl.FINGERUP:
@@ -583,6 +586,103 @@ static unsafe class TouchInput
         return keep;
     }
 
+    // ---- mouse real (Bluetooth/USB) sem teclado
+    // Na IDE desktop a vista de um canvas anda com o botao do meio, Espaco+esquerdo ou Shift+roda, e o
+    // zoom e Ctrl+roda. No celular nao ha teclado e muitos mouses nao tem roda horizontal: a roda so
+    // rolava a room para cima e para baixo. Entao, so sobre canvas (room, sprite, tileset) e workspace:
+    //   arrastar com o direito -> a vista acompanha o mouse 1:1 (MobileWorkspace, como os dois dedos);
+    //   direito segurado + roda -> zoom (Ctrl+roda);
+    //   clique direito sem arrastar -> clique direito normal (menu de contexto).
+    // Fora de canvas (listas, paineis) o direito segurado e entregue como antes. O "down" do direito fica
+    // segurado ate decidir; a IDE diz o que ha sob o ponteiro (MobileWindowFit.ProbeCanvas).
+    static bool _rmbHeld, _rmbPan, _rmbUsed, _rmbCtrl;
+    static Sdl.Event _rmbDown;
+    static int _rmbX, _rmbY, _rmbLastX, _rmbLastY, _rmbProbeGen;
+    static long _rmbTicks;
+    const int MouseProbeWaitMs = 400;   // a IDE responde num quadro; folga para quadros lentos
+
+    static bool HandleRealMouse(Sdl.Event* e)
+    {
+        List<Sdl.Event>? inject = null;
+        bool keep = true;
+        lock (_gate)
+        {
+            switch (e->type)
+            {
+                case Sdl.MOUSEBUTTONDOWN when e->button == Sdl.BUTTON_RIGHT:
+                    _rmbHeld = true; _rmbPan = _rmbUsed = _rmbCtrl = false;
+                    _rmbDown = *e;
+                    _windowId = e->windowID;
+                    _rmbX = _rmbLastX = e->x; _rmbY = _rmbLastY = e->y;
+                    _rmbTicks = Environment.TickCount64;
+                    MobileWorkspace.CanvasProbeX = e->x;
+                    MobileWorkspace.CanvasProbeY = e->y;
+                    MobileWorkspace.CanvasProbeTolerance = int.MaxValue;
+                    _rmbProbeGen = ++MobileWorkspace.CanvasProbeGen;
+                    keep = false;   // segura ate saber se e clique, arraste da vista ou zoom
+                    break;
+
+                case Sdl.MOUSEMOTION when _rmbHeld:
+                {
+                    int px = _rmbLastX, py = _rmbLastY;
+                    _rmbLastX = e->x; _rmbLastY = e->y;
+                    if (_rmbPan)
+                    {
+                        MobileWorkspace.AddPan(px - e->x, py - e->y);
+                        e->motionState = 0;   // para a IDE e so o ponteiro andando
+                        break;
+                    }
+                    if (_rmbUsed) { e->motionState = 0; break; }
+                    float dx = e->x - _rmbX, dy = e->y - _rmbY;
+                    if (dx * dx + dy * dy <= _slopPx * _slopPx) { e->motionState = 0; break; }
+                    bool answered = MobileWorkspace.TryGetCanvasProbe(_rmbProbeGen, out bool canvas, out _);
+                    if (!answered && Environment.TickCount64 - _rmbTicks < MouseProbeWaitMs) { e->motionState = 0; break; }
+                    if (answered && canvas)
+                    {
+                        _rmbPan = true;
+                        MobileWorkspace.BeginGesture();
+                        MobileWorkspace.AddPan(_rmbX - e->x, _rmbY - e->y);
+                        e->motionState = 0;
+                        Log.Info(Tag, $"Mouse: arrastar com o direito -> mover a vista desde ({_rmbX},{_rmbY})");
+                    }
+                    else
+                    {
+                        // Nao e canvas: o arraste com o direito segue como na IDE desktop.
+                        _rmbHeld = false;
+                        inject = new() { _rmbDown };
+                        Log.Info(Tag, "Mouse: arrastar com o direito fora de canvas -> direito normal");
+                    }
+                    break;
+                }
+
+                case Sdl.MOUSEBUTTONUP when e->button == Sdl.BUTTON_RIGHT && _rmbHeld:
+                    _rmbHeld = false;
+                    if (_rmbCtrl) { (inject ??= new()).Add(CtrlKey(Sdl.KEYUP)); _rmbCtrl = false; }
+                    if (_rmbPan || _rmbUsed) keep = false;
+                    else
+                    {
+                        // Clique direito sem arrastar: entrega o "down" segurado e este "up".
+                        (inject ??= new()).Add(_rmbDown);
+                        e->x = _rmbX; e->y = _rmbY;
+                    }
+                    break;
+
+                case Sdl.MOUSEWHEEL when _rmbHeld && !_rmbPan:
+                    // Direito segurado + roda = zoom. O Ctrl fica preso ate soltar o direito.
+                    if (!_rmbCtrl && ShortcutBridge.Ctrl == ShortcutBridge.Off)
+                    {
+                        (inject ??= new()).Add(CtrlKey(Sdl.KEYDOWN));
+                        _rmbCtrl = true;
+                    }
+                    if (!_rmbUsed) Log.Info(Tag, "Mouse: direito segurado + roda -> zoom (Ctrl+roda)");
+                    _rmbUsed = true;
+                    break;
+            }
+        }
+        if (inject != null) Push(inject);
+        return keep;
+    }
+
     static void HandleFinger(Sdl.Event* e)
     {
         List<Sdl.Event>? inject = null;
@@ -651,6 +751,7 @@ static unsafe class TouchInput
                             // O que ha sob o centro dos dedos decide arraste/pinca diretos ou roda.
                             _twoTarget = TwoTarget.Unknown;
                             _twoProbeTicks = Environment.TickCount64;
+                            MobileWorkspace.CanvasProbeTolerance = 3;
                             MobileWorkspace.CanvasProbeX = _lastX;
                             MobileWorkspace.CanvasProbeY = _lastY;
                             _twoProbeGen = ++MobileWorkspace.CanvasProbeGen;

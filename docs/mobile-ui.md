@@ -92,7 +92,16 @@ Ainda não confirmado:
   - Quando o gesto vira arrasto, a IDE diz no quadro seguinte o que há sob o centro dos dedos (`MobileWindowFit.ProbeCanvas`). Em um `PanArea` (como `RoomEditor_Room`) ou no `WorkspaceArea`, o deslocamento muda o `Scroll` do alvo pelo mesmo caminho do arraste com o botão do meio (`MobileWindowFit.ApplyPending`).
   - Em listas, no Inspetor e no código os dois dedos continuam virando roda do mouse.
   - Antes, tudo virava roda em notches de 24 dp. Além disso, o `SDL_MULTIGESTURE` nativo chegava ao `PanArea`/`WorkspaceArea`. Qualquer variação de distância entre os dedos acima de 0,03 virava zoom e travava o zoom (`SetZoomLockGadget`). Com ele travado, `DoMouseWheelEvent` descartava toda roda, e arrastar a room para os lados dava zoom tremido ou nada. O filtro agora descarta o `SDL_MULTIGESTURE`, e só a nossa pinça (Ctrl+roda) dá zoom.
-- **Pinça:** zoom (Ctrl+roda) no ponto entre os dedos.
+- **Pinça no workspace**, inclusive com os dedos sobre uma janela de editor: zoom contínuo, proporcional à abertura dos dedos e ancorado no ponto entre eles. Mover os dedos juntos também arrasta.
+  - A mesma sondagem decide o alvo. Se, subindo a partir do gadget sob os dedos, o primeiro alvo for o `WorkspaceArea` e não um `PanArea`, a escala vira a do início do gesto vezes a razão entre as distâncias dos dedos. A conta é a do `WorkspaceArea.WorkspaceZoom`, que é protegido, dentro de `MinScale`..`MaxScale` (0,1 a 20).
+  - Antes, a pinça virava Ctrl+roda, e a janela sob os dedos a consumia. `ScrollBar.Parent_MouseWheel` só deixa o Ctrl+roda subir em janelas de uma cadeia do workspace, e listas como a do Prefabs usam o Ctrl+roda para o tamanho dos ícones.
+  - Abrir um editor não volta mais o workspace para 100%: a vista só anda até ele (`MobileWindowPolicy.ShowWindow`).
+- **Pinça em canvas e painéis** (room, sprite, Asset Browser): Ctrl+roda no ponto entre os dedos.
+- **Mouse real (Bluetooth/USB) sem teclado:** na IDE desktop, a vista de um canvas anda com o botão do meio, com Espaço+esquerdo ou com Shift+roda, e o zoom é Ctrl+roda. No celular não há teclado, e muitos mouses só têm roda vertical: dava para rolar a room só para cima e para baixo. Sobre canvas e workspace (`TouchInput.HandleRealMouse`):
+  - arrastar com o botão direito move a vista 1:1 em qualquer direção, pelo mesmo caminho dos dois dedos;
+  - segurar o direito e girar a roda dá zoom (Ctrl+roda);
+  - clique direito sem arrastar continua abrindo o menu de contexto.
+  - O "down" do direito fica segurado até a sondagem dizer o que há sob o ponteiro. Fora de canvas (listas, painéis) ele é entregue e o arraste com o direito segue como na IDE desktop. A roda sozinha e o botão do meio não mudaram.
 - **Modo Mover** (barra de atalhos): um dedo arrasta o canvas sob ele (por exemplo, a room) ou, fora de um canvas, o workspace. A pinça dá zoom no mesmo alvo.
 
 ## Janelas
@@ -156,6 +165,8 @@ Confirmado:
 
 Confirmado em 08/11/2026 (POCO F7, editor de sala do Tower Defense Template, `rm_level_1`):
 - **Dois dedos na room:** a sondagem respondeu `RoomEditor_Room` em cerca de 15 ms e a room acompanhou os dedos nos dois eixos, sem notches de roda. A pinça deu zoom nos dois sentidos.
+- **Pinça no workspace com o Prefabs aberto:** 34 gestos de dois dedos foram aplicados direto no workspace, 22 deles com os dedos sobre janelas (`TitleBar`, `ScrollPanel`, `BrowseButton`). A escala variou de 0,10 a 1,35, sem erros.
+- **Mouse Bluetooth na room:** 8 de 8 arrastos com o direito moveram a vista, inclusive os rápidos. Na primeira versão, a sondagem exigia o ponteiro a 3 px do ponto do clique, e um arraste rápido virava clique direito comum. Para o mouse, agora vale o que estiver sob o ponteiro no quadro seguinte (`CanvasProbeTolerance`), com até 400 ms de espera. O zoom com o direito segurado + roda ainda não foi testado no aparelho.
 - **Modo Mover na room:** um arraste de 400 px moveu a vista cerca de 395 px para a esquerda, sem desvio vertical. O arraste na diagonal também funcionou.
 - O `adb` não injeta dois dedos nesse aparelho, porque o SELinux bloqueia o `sendevent` no touchscreen. Por isso o gesto de dois dedos foi testado à mão, e o caminho comum (`ApplyPending` → `PanArea.Scroll`) foi testado pelo modo Mover com `input swipe`.
 

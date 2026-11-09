@@ -104,6 +104,10 @@ public static class MobileWorkspace
     //   zoomWorkspace: a pinca e do workspace (o primeiro entre PanArea e WorkspaceArea subindo do
     //   gadget e o workspace, mesmo com listas/paineis de uma janela no caminho).
     public static volatile int CanvasProbeGen, CanvasProbeX, CanvasProbeY;
+    // Distancia maxima (px) entre o ponteiro da IDE e o ponto pedido. Toque: 3 (o movimento injetado ate
+    // o centro dos dedos precisa ter chegado). Mouse real: o ponteiro ja esta la e continua andando, entao
+    // vale o que estiver sob ele no quadro seguinte.
+    public static volatile int CanvasProbeTolerance = 3;
     static volatile int _canvasDoneGen = -1;
     static volatile bool _canvasHit, _zoomWorkspace;
 
@@ -289,12 +293,13 @@ static class MobileWindowFit
             int gen = MobileWorkspace.CanvasProbeGen;
             if (gen == _canvasProbed) return;
             // O movimento do ponteiro ate o centro dos dedos precisa ja ter chegado a IDE.
-            if (Math.Abs(WindowManager.MouseX - MobileWorkspace.CanvasProbeX) > 3 ||
-                Math.Abs(WindowManager.MouseY - MobileWorkspace.CanvasProbeY) > 3) return;
+            int tol = MobileWorkspace.CanvasProbeTolerance;
+            if (Math.Abs(WindowManager.MouseX - MobileWorkspace.CanvasProbeX) > tol ||
+                Math.Abs(WindowManager.MouseY - MobileWorkspace.CanvasProbeY) > tol) return;
             _canvasProbed = gen;
             var t = ResolvePanTarget(stopAtScroll: true);
             bool zoomWs = ResolvePanTarget(stopAtScroll: false) is WorkspaceArea;
-            Log.Info(Tag, $"Dois dedos #{gen} sobre {YoYoStudio.IDE.WindowManager?.GetMouseOverGadget()?.GetType().Name ?? "-"}: " +
+            Log.Info(Tag, $"Sondagem #{gen} sobre {YoYoStudio.IDE.WindowManager?.GetMouseOverGadget()?.GetType().Name ?? "-"}: " +
                           (t != null ? $"arrastar {t.GetType().Name}" : "roda") + (zoomWs ? ", pinca no workspace" : ", pinca Ctrl+roda"));
             MobileWorkspace.AnswerCanvasProbe(gen, t != null, zoomWs);
         }

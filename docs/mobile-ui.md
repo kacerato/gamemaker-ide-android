@@ -68,12 +68,14 @@ Confirmado no aparelho:
 - O seletor de editores lista as abas e "Novo workspace".
 - As gavetas Recursos, Inspetor, Saída, Erros e Prefabs abrem e fecham pelo trilho. A de baixo fica limitada a ~45% da altura e, ao fechar, não deixa conteúdo por cima do workspace.
 - O caso da hornet: com a gaveta fechada, tocar numa instância da sala abre o Inspetor com ela (`GMRSequenceGraphic`), e a gaveta de Recursos fecha.
+- O voltar do Android fecha a gaveta aberta sem mandar Esc para a IDE. Sem gaveta nem folha aberta, continua virando Esc.
+- Abrir `rm_level_1` pela gaveta de Recursos fecha essa gaveta. As Camadas e o Inspetor que a sala abre ficam.
 - A pinça no workspace funciona com a casca ligada: escala de 0,46 a 0,14 (gestos em `TouchInput.cs`, de outra sessão).
 - A interface desktop é a padrão. A casca liga e desliga ao vivo pelo menu "⋯" do botão de atalhos.
 
 Ainda não confirmado:
 - Alça de redimensionar e "No workspace" (`MobileWindowGrip`): não apareceram nos testes. O "Prefab Library" que parecia flutuante era o conteúdo do dock de baixo vazando depois do `Hide()` (corrigido), não uma janela flutuante. Falta testar com uma janela flutuante de verdade (Preferências, `FloatingDock`).
-- O voltar do Android fechando a gaveta (`dispatchKeyEvent`): a primeira versão, via `onBackPressed`, não funcionava.
+- Mouse Bluetooth (arrastar com o direito na room) com a casca ligada: validado pela sessão de gestos só sem a casca.
 - A primeira chamada JNI da casca às vezes falha ("Handle value is not valid"). O estado é reenviado no ciclo seguinte e a barra aparece normalmente.
 
 ## Toque
